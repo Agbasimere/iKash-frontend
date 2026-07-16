@@ -4,6 +4,7 @@ import {
     requestAccess,
     getAddress,
     signTransaction,
+    signMessage as freighterSignMessage,
 } from "@stellar/freighter-api";
 
 export const freighterAdapter = {

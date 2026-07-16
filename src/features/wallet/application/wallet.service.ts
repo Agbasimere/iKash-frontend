@@ -6,6 +6,77 @@ import type { WalletProvider } from "../domain/wallet.types";
 const PROVIDER_KEY = "wallet:provider";
 const PUBLICKEY_KEY = "wallet:publicKey";
 
+interface ChallengeResponse {
+    challenge: string;
+    expiresAt?: string;
+}
+
+interface LoginResponse {
+    access_token?: string;
+    token?: string;
+    jwt?: string;
+}
+
+function getApiBaseUrl(): string {
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+}
+
+function normalizeSignature(signature: string): string {
+    return signature.trim();
+}
+
+function isExpiredChallengeError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+    const lower = message.toLowerCase();
+    return lower.includes("expired") || lower.includes("401") || lower.includes("unauthorized");
+}
+
+let authInFlight: Promise<string> | null = null;
+
+async function requestChallenge(publicKey: string): Promise<ChallengeResponse> {
+    const res = await fetch(`${getApiBaseUrl()}/auth/challenge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicKey }),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "No se pudo solicitar el challenge de autenticación.");
+    }
+
+    return (await res.json()) as ChallengeResponse;
+}
+
+async function requestLogin(publicKey: string, challenge: string, signature: string): Promise<string> {
+    const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicKey, challenge, signature }),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "No se pudo completar el inicio de sesión.");
+    }
+
+    const data = (await res.json()) as LoginResponse;
+    return data.access_token || data.token || data.jwt || "";
+}
+
+async function signChallenge(challenge: string): Promise<string> {
+    const provider = localStorage.getItem(PROVIDER_KEY) as WalletProvider | null;
+    if (!provider) throw new Error("No wallet connected");
+
+    if (provider === "freighter") {
+        const signed = await freighterAdapter.signMessage(challenge);
+        return normalizeSignature(signed);
+    }
+
+    const signed = await lobstrAdapter.signMessage(challenge);
+    return normalizeSignature(signed);
+}
+
 export const walletService = {
     //Restaura la sesión desde localStorage sin llamadas a las extensiones
     async restoreSession(): Promise<{ publicKey: string; provider: WalletProvider } | null> {
@@ -69,6 +140,57 @@ export const walletService = {
             return await freighterAdapter.signTransaction(xdr, network);
         } else {
             return await lobstrAdapter.signTransaction(xdr);
+        }
+    },
+
+    async authenticate(publicKey: string): Promise<string> {
+        if (authInFlight) {
+            return authInFlight;
+        }
+
+        authInFlight = (async () => {
+            let currentChallenge = "";
+
+            try {
+                const challengeResponse = await requestChallenge(publicKey);
+                currentChallenge = challengeResponse.challenge;
+
+                for (let attempt = 0; attempt < 2; attempt += 1) {
+                    try {
+                        const signature = await signChallenge(currentChallenge);
+                        const token = await requestLogin(publicKey, currentChallenge, signature);
+                        if (!token) {
+                            throw new Error("La respuesta de autenticación no incluyó un JWT.");
+                        }
+                        return token;
+                    } catch (error) {
+                        if (attempt === 0 && isExpiredChallengeError(error)) {
+                            const freshChallenge = await requestChallenge(publicKey);
+                            currentChallenge = freshChallenge.challenge;
+                            continue;
+                        }
+
+                        if (isSignatureCancelled(error)) {
+                            throw new Error("Wallet signature is required to verify ownership and complete login.");
+                        }
+
+                        throw error;
+                    }
+                }
+
+                throw new Error("No se pudo completar el inicio de sesión.");
+            } catch (error) {
+                if (isSignatureCancelled(error)) {
+                    throw new Error("Wallet signature is required to verify ownership and complete login.");
+                }
+                throw error;
+            }
+        })();
+
+        try {
+            return await authInFlight;
+        } finally {
+            authInFlight = null;
         }
     },
 
