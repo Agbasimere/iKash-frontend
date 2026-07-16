@@ -47,6 +47,30 @@ export const freighterAdapter = {
         }
     },
 
+    async signMessage(message: string): Promise<string> {
+        const res = await freighterSignMessage(message);
+
+        if (typeof res === "object" && res !== null && "error" in res && res.error) {
+            const msg = typeof res.error === "string" ? res.error : (res.error?.message ?? JSON.stringify(res.error));
+            throw new Error(msg);
+        }
+
+        const signedMessage = typeof res === "string"
+            ? res
+            : res?.signedMessage;
+
+        if (typeof signedMessage === "string") {
+            return signedMessage.trim();
+        }
+
+        if (signedMessage && typeof signedMessage === "object" && "byteLength" in signedMessage) {
+            const bytes = signedMessage as Uint8Array;
+            return Buffer.from(bytes).toString("base64");
+        }
+
+        throw new Error("No se pudo obtener la firma del mensaje.");
+    },
+
     // Firma una transacción XDR con Freighter
     async signTransaction(xdr: string, network: string = "TESTNET"): Promise<string> {
         type SignResult = string | { signedTxXdr?: string; signedTransaction?: string; signedXDR?: string; error?: string | { message: string } };
