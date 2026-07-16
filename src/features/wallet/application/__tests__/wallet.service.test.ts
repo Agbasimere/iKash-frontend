@@ -1,5 +1,107 @@
-import { describe, it, expect } from "vitest";
-import { isSignatureCancelled } from "../wallet.service";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { isSignatureCancelled, walletService } from "../wallet.service";
+import { stellarWalletKitService } from "../stellar-wallet-kit.service";
+
+vi.mock("../stellar-wallet-kit.service", () => ({
+    stellarWalletKitService: {
+        setWallet: vi.fn(),
+        getAddress: vi.fn(),
+        connect: vi.fn(),
+        signTransaction: vi.fn(),
+        disconnect: vi.fn(),
+    },
+}));
+
+const mockedKit = vi.mocked(stellarWalletKitService);
+
+describe("walletService", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        localStorage.clear();
+    });
+
+    describe("connect", () => {
+        it("persists walletId and publicKey on success", async () => {
+            mockedKit.connect.mockResolvedValueOnce("GADDRESS");
+
+            const publicKey = await walletService.connect("freighter-id");
+
+            expect(publicKey).toBe("GADDRESS");
+            expect(localStorage.getItem("wallet:provider")).toBe("freighter-id");
+            expect(localStorage.getItem("wallet:publicKey")).toBe("GADDRESS");
+        });
+    });
+
+    describe("signTransaction", () => {
+        it("throws when no wallet is connected", async () => {
+            await expect(walletService.signTransaction("XDR")).rejects.toThrow("No wallet connected");
+        });
+
+        it("selects the stored wallet and signs through the kit", async () => {
+            localStorage.setItem("wallet:provider", "freighter-id");
+            localStorage.setItem("wallet:publicKey", "GADDRESS");
+            mockedKit.signTransaction.mockResolvedValueOnce("SIGNED_XDR");
+
+            const result = await walletService.signTransaction("XDR");
+
+            expect(mockedKit.setWallet).toHaveBeenCalledWith("freighter-id");
+            expect(mockedKit.signTransaction).toHaveBeenCalledWith("XDR", "GADDRESS");
+            expect(result).toBe("SIGNED_XDR");
+        });
+    });
+
+    describe("restoreSession", () => {
+        it("returns null when nothing is stored", async () => {
+            await expect(walletService.restoreSession()).resolves.toBeNull();
+        });
+
+        it("restores a session when the kit confirms the same address", async () => {
+            localStorage.setItem("wallet:provider", "freighter-id");
+            localStorage.setItem("wallet:publicKey", "GADDRESS");
+            mockedKit.getAddress.mockResolvedValueOnce("GADDRESS");
+
+            const session = await walletService.restoreSession();
+
+            expect(session).toEqual({ publicKey: "GADDRESS", walletId: "freighter-id" });
+        });
+
+        it("clears a stale session when the kit returns a different address", async () => {
+            localStorage.setItem("wallet:provider", "freighter-id");
+            localStorage.setItem("wallet:publicKey", "GOLD_ADDRESS");
+            mockedKit.getAddress.mockResolvedValueOnce("GNEW_ADDRESS");
+
+            const session = await walletService.restoreSession();
+
+            expect(session).toBeNull();
+            expect(localStorage.getItem("wallet:provider")).toBeNull();
+            expect(localStorage.getItem("wallet:publicKey")).toBeNull();
+        });
+
+        it("clears a stale session when the kit fails to reconnect", async () => {
+            localStorage.setItem("wallet:provider", "freighter-id");
+            localStorage.setItem("wallet:publicKey", "GADDRESS");
+            mockedKit.getAddress.mockRejectedValueOnce(new Error("extension not found"));
+
+            const session = await walletService.restoreSession();
+
+            expect(session).toBeNull();
+            expect(localStorage.getItem("wallet:provider")).toBeNull();
+        });
+    });
+
+    describe("clearSession", () => {
+        it("removes stored wallet data and disconnects the kit", () => {
+            localStorage.setItem("wallet:provider", "freighter-id");
+            localStorage.setItem("wallet:publicKey", "GADDRESS");
+
+            walletService.clearSession();
+
+            expect(localStorage.getItem("wallet:provider")).toBeNull();
+            expect(localStorage.getItem("wallet:publicKey")).toBeNull();
+            expect(mockedKit.disconnect).toHaveBeenCalled();
+        });
+    });
+});
 
 describe("isSignatureCancelled", () => {
     // --- Freighter rejection object (primary code-based detection) ---
