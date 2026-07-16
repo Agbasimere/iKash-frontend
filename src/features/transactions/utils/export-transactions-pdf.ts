@@ -101,13 +101,13 @@ export function exportTransactionsPdf(
 
     // Define table columns
     const columns = [
-        { name: "Date", width: 28 },
-        { name: "Order ID", width: 22 },
+        { name: "Date", width: 38 },
+        { name: "Order ID", width: 18 },
         { name: "Role", width: 14 },
-        { name: "Asset", width: 34 },
-        { name: "Fiat", width: 34 },
-        { name: "Status", width: 18 },
-        { name: "Tx Hash", width: 30 }
+        { name: "Asset", width: 28 },
+        { name: "Fiat", width: 28 },
+        { name: "Status", width: 20 },
+        { name: "Tx Hash", width: 34 }
     ];
 
     const drawTableHeader = (startY: number) => {
