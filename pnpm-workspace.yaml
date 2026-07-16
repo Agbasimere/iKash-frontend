@@ -1,3 +1,12 @@
-allowBuilds:
-  sharp: true
-  unrs-resolver: true
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
+  - "@reown/appkit"
+  - "@stellar/stellar-sdk"
+  - blake-hash
+  - bufferutil
+  - protobufjs
+  - secp256k1
+  - tiny-secp256k1
+  - usb
+  - utf-8-validate
