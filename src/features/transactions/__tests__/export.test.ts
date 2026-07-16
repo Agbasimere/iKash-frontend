@@ -20,8 +20,8 @@ vi.mock("jspdf", () => {
     const mockSetLineWidth = vi.fn();
 
     // Attach to globalThis so tests can assert calls
-    (globalThis as any)._mockSave = mockSave;
-    (globalThis as any)._mockLink = mockLink;
+    (globalThis as unknown as { _mockSave: typeof mockSave })._mockSave = mockSave;
+    (globalThis as unknown as { _mockLink: typeof mockLink })._mockLink = mockLink;
 
     class MockJsPDF {
         save = mockSave;
@@ -242,7 +242,7 @@ describe("CSV Export Utility", () => {
             click: clickSpy,
         };
         
-        const createElementSpy = vi.spyOn(document, "createElement").mockReturnValue(mockLink as any);
+        const createElementSpy = vi.spyOn(document, "createElement").mockReturnValue(mockLink as unknown as HTMLAnchorElement);
         const appendChildSpy = vi.spyOn(document.body, "appendChild").mockImplementation((el) => el);
         const removeChildSpy = vi.spyOn(document.body, "removeChild").mockImplementation((el) => el);
 
@@ -288,7 +288,7 @@ describe("PDF Export Utility", () => {
             dateRange: { from: "2026-10-01", to: "2026-10-31" }
         });
 
-        expect((globalThis as any)._mockSave).toHaveBeenCalledWith("test-filename.pdf");
+        expect((globalThis as unknown as { _mockSave: typeof mockSave })._mockSave).toHaveBeenCalledWith("test-filename.pdf");
     });
 });
 
@@ -309,7 +309,7 @@ describe("Integration Tests - Filtered Data Export", () => {
 
         // Verify only the filtered completed order was mapped and exported
         expect(mapSpy).toHaveBeenCalledWith(completedOrders, MOCK_CURRENT_USER_ID);
-        expect((globalThis as any)._mockSave).toHaveBeenCalled();
+        expect((globalThis as unknown as { _mockSave: typeof mockSave })._mockSave).toHaveBeenCalled();
         
         mapSpy.mockRestore();
     });

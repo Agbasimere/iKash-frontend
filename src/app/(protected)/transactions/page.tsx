@@ -8,7 +8,7 @@ import { Aside } from "@/app/components/Aside";
 import { Header } from "@/app/components/Header";
 import { TransactionExportMenu } from "@/features/transactions/components/TransactionExportMenu";
 import { transactionExportService } from "@/features/transactions/services/transaction-export.service";
-import { ShoppingCart, TrendingUp, ChevronRight, Calendar, Loader2 } from "lucide-react";
+import { ShoppingCart, TrendingUp, ChevronRight, Loader2 } from "lucide-react";
 
 export default function TransactionsPage() {
     const { currentUser } = useUser();
@@ -33,8 +33,21 @@ export default function TransactionsPage() {
 
     useEffect(() => {
         if (!currentUser?.userId) return;
-        setLoading(true);
-        fetchUserOrders(currentUser.userId).finally(() => setLoading(false));
+
+        let active = true;
+        const timer = setTimeout(() => {
+            if (active) setLoading(true);
+        }, 0);
+
+        fetchUserOrders(currentUser.userId).finally(() => {
+            clearTimeout(timer);
+            if (active) setLoading(false);
+        });
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
     }, [currentUser?.userId, fetchUserOrders]);
 
     // Apply client-side filters
