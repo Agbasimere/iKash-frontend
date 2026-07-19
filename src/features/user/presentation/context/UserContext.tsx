@@ -44,23 +44,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Optional: Load user from localStorage or similar if needed
     useEffect(() => {
         const storedToken = localStorage.getItem('ikash_token');
-        if (storedToken) {
-            if (isTokenExpired(storedToken)) {
-                logout();
-                return;
-            }
-            setAccessToken(storedToken);
-        }
-
         const storedUser = localStorage.getItem('ikash_user');
-        if (storedUser) {
-            try {
-                setCurrentUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error('Error parsing stored user:', e);
+
+        const timer = setTimeout(() => {
+            if (storedToken && !isTokenExpired(storedToken)) {
+                setAccessToken(storedToken);
             }
-        }
-    }, [logout]);
+
+            if (storedUser && storedToken && !isTokenExpired(storedToken)) {
+                try {
+                    setCurrentUser(JSON.parse(storedUser));
+                    return;
+                } catch (err) {
+                    console.error('Error parsing stored user:', err);
+                }
+            }
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     // Periodically check for token expiration
     useEffect(() => {

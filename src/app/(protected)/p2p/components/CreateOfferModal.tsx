@@ -1,12 +1,11 @@
 'use client';
 
 import Image from 'next/image'
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import usdcIcon from '../../../../../public/usdc.png';
 import { CloseModalProps } from '@/app/utils/closeModalProps';
 import { useOffers } from '@/features/offer/hooks/useOffers';
 import { useUser } from '@/features/user/presentation/context/UserContext';
-import { useRouter } from 'next/navigation';
 import { useWallet, useWalletBalance } from '@/features/wallet';
 
 export function CreateOfferModal({ onClose }: CloseModalProps) {
@@ -25,14 +24,12 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
 
     // Obtener balance de USDC del usuario
     const usdcAssetBalance = balances?.find(
-        (b: any) => b.asset_code === 'USDC' || b.assetCode === 'USDC'
+        (b) => b.asset_code === 'USDC'
     );
     const usdcBalance = usdcAssetBalance
         ? parseFloat(usdcAssetBalance.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : '0.00';
     const { createOffer } = useOffers();
-
-    const nav = useRouter();
 
     const [checked, setChecked] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,8 +66,8 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
             } else {
                 setIsSubmitting(false);
             }
-        } catch (err: any) {
-            alert(`Failed to create offer: ${err.message || err}`);
+        } catch (err: unknown) {
+            alert(`Failed to create offer: ${err instanceof Error ? err.message : String(err)}`);
             setIsSubmitting(false);
         }
     }
@@ -219,7 +216,7 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
                             <div className="flex flex-col gap-4">
                                 {/* Legacy payment methods */}
                                 {currentUser?.paymentMethods?.map((pm) => {
-                                    const id = pm.paymentId || pm.payment_id || pm.id;
+                                    const id = String(pm.paymentId ?? pm.payment_id ?? pm.id ?? "");
                                     const name = pm.payment_provider?.name || pm.paymentProvider?.name || pm.bankName || pm.type || "Payment Method";
                                     const identifier = pm.accountIdentifier || pm.account_identifier || pm.accountDetails || "";
                                     const owner = pm.beneficiaryName || pm.beneficiary_name || "";
@@ -229,7 +226,7 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
                                             key={id}
                                             className={`flex w-99.75 h-17.5 border rounded-xl items-center gap-3 cursor-pointer
                                                     ${checked.includes(id) ? 'border-[#DAFF0066]' : 'border-[#1C2128]'}`}
-                                            onClick={() => toggle(id as any)}
+                                            onClick={() => toggle(id as unknown as string)}
                                         >
                                             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors m-3
                                                     ${checked.includes(id) ? 'bg-[#DAFF00] border-[#DAFF00]' : 'bg-transparent border-gray-600'}`}
@@ -252,7 +249,7 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
 
                                 {/* New payment_method (v2) */}
                                 {currentUser?.payment_method?.map((pm) => {
-                                    const id = pm.payment_id || pm.paymentId || pm.id;
+                                    const id = String(pm.payment_id ?? pm.paymentId ?? pm.id ?? "");
                                     const name = pm.payment_provider?.name || pm.paymentProvider?.name || pm.type || "Payment Method";
                                     const identifier = pm.account_identifier || pm.accountIdentifier || pm.accountDetails || "";
                                     const owner = pm.beneficiary_name || pm.beneficiaryName || "";
@@ -262,7 +259,7 @@ export function CreateOfferModal({ onClose }: CloseModalProps) {
                                             key={id}
                                             className={`flex w-99.75 h-17.5 border rounded-xl items-center gap-3 cursor-pointer
                                                     ${checked.includes(id) ? 'border-[#DAFF0066]' : 'border-[#1C2128]'}`}
-                                            onClick={() => toggle(id as any)}
+                                            onClick={() => toggle(id as unknown as string)}
                                         >
                                             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors m-3
                                                     ${checked.includes(id) ? 'bg-[#DAFF00] border-[#DAFF00]' : 'bg-transparent border-gray-600'}`}

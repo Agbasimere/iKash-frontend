@@ -7,12 +7,14 @@ import { useEffect } from "react";
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { isConnected, isLoading } = useWallet();
   const router = useRouter();
+  const canAccess = isConnected;
 
   useEffect(() => {
-    if (!isLoading && !isConnected) {
+    if (!isLoading && !canAccess) {
       router.replace("/welcome");
+      return;
     }
-  }, [isConnected, isLoading, router]);
+  }, [canAccess, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -22,7 +24,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!isConnected) return null;
+  if (!canAccess) return null;
 
   return <>{children}</>;
 }

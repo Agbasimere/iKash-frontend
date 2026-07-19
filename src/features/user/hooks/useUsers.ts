@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Users } from "../models/users";
 import { CreateUser } from "../models/createUser";
 import { SetupAccountPayload } from "../models/setupAccount";
@@ -24,7 +24,7 @@ export function useUsers() {
             .catch(err => console.error(err));
     }, []);
 
-    const getUser = async (userId: string) => {
+    const getUser = useCallback(async (userId: string) => {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`)
             if (!res.ok) throw new Error('User not found');
@@ -33,7 +33,7 @@ export function useUsers() {
         } catch (error) {
             console.error(error)
         }
-    }
+    }, [])
 
     const createUser = async (user: CreateUser) => {
         try {
@@ -58,6 +58,7 @@ export function useUsers() {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
+                    ...(accessToken ? { "Authorization": `Bearer ${accessToken}` } : {}),
                 },
                 body: JSON.stringify(userData),
             })
@@ -68,6 +69,34 @@ export function useUsers() {
             return data;
         } catch (error) {
             console.error('Error updating user:', error);
+            return null;
+        }
+    }
+
+    const uploadProfilePicture = async (userId: string, file: File): Promise<Users | null> => {
+        try {
+            const formData = new FormData();
+            formData.append("profileImage", file);
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/profile-picture`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText || "Upload profile picture error");
+            }
+
+            const data = await res.json();
+            setUser(data);
+            setCurrentUser(data);
+            return data;
+        } catch (error) {
+            console.error("Error uploading profile picture:", error);
             return null;
         }
     }
@@ -87,7 +116,9 @@ export function useUsers() {
 
     const checkAliasAvailable = async (alias: string): Promise<{ available: boolean }> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/validate-alias?alias=${alias}`)
+            const headers: Record<string, string> = {};
+            if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/validate-alias?alias=${alias}`, { headers })
             if (!res.ok) throw new Error('Check alias error');
             return await res.json();
         } catch (error) {
@@ -120,5 +151,5 @@ export function useUsers() {
         }
     }
 
-    return { users, user, getUser, createUser, updateUser, userFound, getOrCreateByWallet, checkAliasAvailable, setupAccount };
+    return { users, user, getUser, createUser, updateUser, uploadProfilePicture, userFound, getOrCreateByWallet, checkAliasAvailable, setupAccount };
 }

@@ -11,12 +11,19 @@ import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCa
 import { useWalletBalance } from "@/features/wallet/presentation/hooks/useWalletBalance";
 import { useRouter } from "next/navigation";
 import { useNotification } from "../../../components/NotificationContext";
+import { PaymentMethodOption } from "@/features/paymentMethod/models/paymentMethod";
 import { SignatureCancelledModal } from "./SignatureCancelledModal";
 
 interface ConfirmOrderModalProps {
     offer: Offer;
     creator: Users;
     onClose: () => void;
+}
+
+interface OrderCreateResponse {
+    orderId: string;
+    unsignedFundTransaction?: string | null;
+    escrow?: { escrowId: string } | null;
 }
 
 export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModalProps) {
@@ -73,12 +80,12 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
 
     // Intersect Payment Methods
     const intersectingMethods = useMemo(() => {
-        const creatorMethods: any[] = [
+        const creatorMethods: PaymentMethodOption[] = [
             ...(offer.payment_methods || []),
             ...(offer.paymentMethods || [])
         ];
 
-        const userMethods: any[] = [
+        const userMethods: PaymentMethodOption[] = [
             ...(currentUser?.payment_method || []),
             ...(currentUser?.paymentMethods || [])
         ];
@@ -89,7 +96,7 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
 
         userMethods.forEach(um => {
             const umProviderId = um.provider_id || um.bankName;
-            const umLabel = um.payment_provider?.name || um.bankName || um.type;
+            const umLabel = um.payment_provider?.name || um.bankName || um.type || "";
             const umDesc = um.account_identifier || um.accountDetails || "";
 
             const matchFound = creatorMethods.some(cm => {
@@ -97,9 +104,10 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
                 return cmProviderId === umProviderId;
             });
 
-            if (matchFound) {
+            const paymentId = um.payment_id || um.paymentId;
+            if (matchFound && paymentId) {
                 matches.push({
-                    id: um.payment_id || um.paymentId,
+                    id: paymentId,
                     label: umLabel,
                     desc: umDesc
                 });
@@ -113,7 +121,7 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
         if (intersectingMethods.length > 0 && !selectedPaymentId) {
             setSelectedPaymentId(intersectingMethods[0].id);
         }
-    }, [intersectingMethods]);
+    }, [intersectingMethods, selectedPaymentId]);
 
     const selectedMethodObj = useMemo(() => {
         return intersectingMethods.find(m => m.id === selectedPaymentId) || intersectingMethods[0];
@@ -179,7 +187,7 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
             // Single unified call — backend deploys escrow on TW first,
             // then persists Order + EscrowOnChain atomically.
             // If escrow deployment fails, no DB record is created.
-            const orderData: any = await createOrder({
+            const orderData: OrderCreateResponse = await createOrder({
                 offerId: offer.offerId,
                 buyerId: isBuyOperation ? currentUser.userId : offer.creatorId,
                 sellerId: isBuyOperation ? offer.creatorId : currentUser.userId,
@@ -208,10 +216,16 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
                     return;
                 }
 
+                if (!escrowId) {
+                    notify("error", "Escrow ID missing. Cannot fund escrow.");
+                    router.push("/p2p/orders/" + orderData.orderId.replace(/-/g, ""));
+                    return;
+                }
+
                 // Sign using connected wallet
                 try {
                     const signedXdr = await sig.sign(unsignedXdr);
-                    await syncEscrow({ escrowId: escrowId, action: "fund", signedXdr });
+                    await syncEscrow({ escrowId, action: "fund", signedXdr });
                     notify("success", "Escrow funded successfully. Redirecting to trade view.");
                     router.push("/p2p/orders/" + orderData.orderId.replace(/-/g, ""));
                     return;
@@ -231,9 +245,9 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
             notify("success", "Order initiated and escrow contract created. The seller has been notified to fund the escrow.");
             router.push("/p2p/orders/" + orderData.orderId.replace(/-/g, ""));
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            const msg = err?.message || "Error initiating order. Please try again.";
+            const msg = err instanceof Error ? err.message : "Error initiating order. Please try again.";
             notify("error", msg);
         } finally {
             setIsSubmitting(false);
@@ -332,7 +346,11 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
                     <div className="bg-[#1F1F25] border-l-4 border-[#CEF100] rounded-lg p-4 flex items-center justify-between h-[80px]">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-[#39383F] border border-[#454932]/30 flex items-center justify-center text-[#E4E1E9] font-bold text-lg shrink-0 overflow-hidden shadow-inner">
-                                👤
+                                {creator?.profileImageUrl ? (
+                                    <img src={creator.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    "👤"
+                                )}
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">

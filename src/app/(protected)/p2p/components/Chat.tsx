@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { User, MoreVertical, SendHorizontal, Paperclip, Loader2 } from "lucide-react";
+import { User, MoreVertical, SendHorizontal, Paperclip } from "lucide-react";
 import { useUser } from "@/features/user/presentation/context/UserContext";
 
 type ChatProps = {
     orderId: string;
     chatName?: string;
+    counterpartyProfileImageUrl?: string;
 };
 
 interface Message {
@@ -46,7 +47,7 @@ const INITIAL_MOCK_MESSAGES = (orderId: string, currentUserId: string): Message[
     }
 ];
 
-export const Chat = ({ orderId, chatName = "Merchant Chat" }: ChatProps) => {
+export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileImageUrl }: ChatProps) => {
     const { currentUser, accessToken } = useUser();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
@@ -61,6 +62,31 @@ export const Chat = ({ orderId, chatName = "Merchant Chat" }: ChatProps) => {
     const scrollToBottom = useCallback((behavior: "smooth" | "auto" = "smooth") => {
         messagesEndRef.current?.scrollIntoView({ behavior });
     }, []);
+
+    // Fetch messages from backend
+    const fetchMessages = useCallback(async () => {
+        if (!currentUser) return;
+        try {
+            const headers: Record<string, string> = {};
+            if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat-messages?orderId=${orderId}`, { headers });
+            if (res.ok) {
+                const data: Message[] = await res.json();
+                
+                // Only update and scroll if message list actually changed to preserve rendering performance
+                setMessages(prev => {
+                    if (data.length !== prev.length) {
+                        setTimeout(() => scrollToBottom("smooth"), 100);
+                        return data;
+                    }
+                    return prev;
+                });
+            }
+        } catch (err) {
+            console.error("Failed to fetch chat messages:", err);
+        }
+    }, [currentUser, accessToken, orderId, scrollToBottom]);
 
     // Load initial messages
     useEffect(() => {
@@ -84,32 +110,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat" }: ChatProps) => {
                 clearInterval(pollingIntervalRef.current);
             }
         };
-    }, [orderId, currentUser, isDemo]);
-
-    // Fetch messages from backend
-    const fetchMessages = async () => {
-        if (!currentUser) return;
-        try {
-            const headers: Record<string, string> = {};
-            if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat-messages?orderId=${orderId}`, { headers });
-            if (res.ok) {
-                const data: Message[] = await res.json();
-                
-                // Only update and scroll if message list actually changed to preserve rendering performance
-                setMessages(prev => {
-                    if (data.length !== prev.length) {
-                        setTimeout(() => scrollToBottom("smooth"), 100);
-                        return data;
-                    }
-                    return prev;
-                });
-            }
-        } catch (err) {
-            console.error("Failed to fetch chat messages:", err);
-        }
-    };
+    }, [orderId, currentUser, isDemo, fetchMessages, scrollToBottom]);
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -187,8 +188,12 @@ export const Chat = ({ orderId, chatName = "Merchant Chat" }: ChatProps) => {
             {/* Header */}
             <header className="h-[64px] border-b border-[rgba(69,73,50,0.1)] px-[24px] flex items-center justify-between shrink-0 bg-[#1B1B21]">
                 <div className="flex items-center gap-3">
-                    <div className="relative w-8 h-8 bg-[#35343A] rounded-full flex items-center justify-center border border-white/[0.04] shrink-0">
-                        <User className="w-4 h-4 text-white" />
+                    <div className="relative w-8 h-8 bg-[#35343A] rounded-full flex items-center justify-center border border-white/[0.04] shrink-0 overflow-hidden">
+                        {counterpartyProfileImageUrl ? (
+                            <img src={counterpartyProfileImageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-4 h-4 text-white" />
+                        )}
                         <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#DAFF00] border border-[#1B1B21]" />
                     </div>
                     <div className="flex flex-col">

@@ -48,17 +48,19 @@ export const freighterAdapter = {
 
     // Firma una transacción XDR con Freighter
     async signTransaction(xdr: string, network: string = "TESTNET"): Promise<string> {
-        const res: any = await signTransaction(xdr, {
+        type SignResult = string | { signedTxXdr?: string; signedTransaction?: string; signedXDR?: string; error?: string | { message: string } };
+        const res: SignResult = await signTransaction(xdr, {
             networkPassphrase:
                 network.toUpperCase() === "PUBLIC"
                     ? "Public Global Stellar Network ; September 2015"
                     : "Test SDF Network ; September 2015",
         });
-        // Freighter v6 returns { code: -4, message: "The user rejected this request." }
-        // when the user cancels. Throw the raw error so callers can inspect code/message fields.
-        if (res?.error) throw res.error;
+        if (typeof res !== "string" && res?.error) {
+            const msg = typeof res.error === "string" ? res.error : (res.error?.message ?? JSON.stringify(res.error));
+            throw new Error(msg);
+        }
         return typeof res === "string"
             ? res
-            : res.signedTxXdr || res.signedTransaction || res.signedXDR || res;
+            : res.signedTxXdr || res.signedTransaction || res.signedXDR || (res as unknown as string);
     }
 };
