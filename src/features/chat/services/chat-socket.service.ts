@@ -13,6 +13,7 @@ export function createChatSocket(accessToken: string): ChatSocket {
     return io(apiUrl.replace(/\/$/, ''), {
         auth: { token: accessToken },
         autoConnect: false,
+        transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 500,

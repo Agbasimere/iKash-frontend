@@ -114,7 +114,7 @@ export function useChatSocket({
     }, [accessToken, enabled, orderId]);
 
     const sendMessage = useCallback(
-        (content: string): Promise<Message> => {
+        (content: string, clientMessageId: string): Promise<Message> => {
             const socket = socketRef.current;
             if (!socket?.connected) {
                 return Promise.reject(new Error('Chat is currently disconnected.'));
@@ -126,7 +126,7 @@ export function useChatSocket({
                     10_000,
                 );
 
-                socket.emit('send-message', { orderId, content }, (response) => {
+                socket.emit('send-message', { orderId, content, clientMessageId }, (response) => {
                     window.clearTimeout(timeout);
                     if (response.ok && response.data) resolve(response.data);
                     else reject(new Error(response.error?.message ?? 'Message could not be sent.'));

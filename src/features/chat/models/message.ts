@@ -5,4 +5,6 @@ export interface Message {
     content: string;
     timestamp: string;
     senderAlias?: string;
+    clientMessageId?: string;
+    deliveryStatus?: "sending" | "delivered" | "failed";
 }

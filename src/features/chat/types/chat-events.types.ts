@@ -37,7 +37,7 @@ export interface ClientToServerEvents {
         acknowledgement?: (response: ChatAck) => void,
     ) => void;
     'send-message': (
-        payload: { orderId: string; content: string },
+        payload: { orderId: string; content: string; clientMessageId: string },
         acknowledgement: (response: ChatAck<Message>) => void,
     ) => void;
 }

@@ -64,7 +64,14 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         setMessages((previous) => {
             const byId = new Map(previous.map((message) => [message.messageId, message]));
             for (const message of additions) {
-                if (message.orderId === orderId) byId.set(message.messageId, message);
+                if (message.orderId !== orderId) continue;
+                if (message.clientMessageId) {
+                    byId.delete(`optimistic:${message.clientMessageId}`);
+                }
+                byId.set(message.messageId, {
+                    ...message,
+                    deliveryStatus: message.deliveryStatus ?? "delivered",
+                });
             }
             return Array.from(byId.values()).sort(
                 (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
@@ -90,14 +97,14 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         if (!currentUser) return;
 
         let cancelled = false;
-        setMessages([]);
-        setHistoryLoaded(false);
+        queueMicrotask(() => {
+            if (cancelled) return;
+            setMessages(isDemo ? INITIAL_MOCK_MESSAGES(orderId, currentUser.userId) : []);
+            setHistoryLoaded(isDemo);
+            if (isDemo) setTimeout(() => scrollToBottom("auto"), 100);
+        });
 
-        if (isDemo) {
-            setMessages(INITIAL_MOCK_MESSAGES(orderId, currentUser.userId));
-            setHistoryLoaded(true);
-            setTimeout(() => scrollToBottom("auto"), 100);
-        } else {
+        if (!isDemo) {
             const loadHistory = async () => {
                 try {
                     const headers: Record<string, string> = {};
@@ -174,11 +181,28 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
             }, 1800);
 
         } else {
+            const clientMessageId = crypto.randomUUID();
+            const optimisticId = `optimistic:${clientMessageId}`;
+            mergeMessages({
+                messageId: optimisticId,
+                clientMessageId,
+                orderId,
+                senderId: currentUser.userId,
+                content: currentText,
+                timestamp: new Date().toISOString(),
+                deliveryStatus: "sending",
+            });
+            setInputText("");
+
             try {
-                const created = await sendMessage(currentText);
+                const created = await sendMessage(currentText, clientMessageId);
                 mergeMessages(created);
-                setInputText("");
             } catch (error) {
+                setMessages((previous) => previous.map((message) =>
+                    message.messageId === optimisticId
+                        ? { ...message, deliveryStatus: "failed" }
+                        : message,
+                ));
                 notify("error", error instanceof Error ? error.message : "Message could not be sent.");
             } finally {
                 setIsSending(false);
@@ -260,8 +284,16 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
                                 >
                                     {msg.content}
                                 </div>
-                                <span className={`text-[9px] text-[#8F8389] font-bold px-1`}>
-                                    {timeStr} {isOwnMessage && "• Delivered"}
+                                <span className={`text-[9px] font-bold px-1 ${
+                                    msg.deliveryStatus === "failed" ? "text-red-400" : "text-[#8F8389]"
+                                }`}>
+                                    {timeStr} {isOwnMessage && (
+                                        msg.deliveryStatus === "sending"
+                                            ? "• Sending…"
+                                            : msg.deliveryStatus === "failed"
+                                                ? "• Failed"
+                                                : "• Delivered"
+                                    )}
                                 </span>
                             </div>
                         );
