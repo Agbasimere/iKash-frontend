@@ -7,6 +7,7 @@ const kitMock = {
     init: vi.fn(),
     setWallet: vi.fn(),
     getAddress: vi.fn(),
+    fetchAddress: vi.fn(),
     signTransaction: vi.fn(),
     getNetwork: vi.fn(),
     disconnect: vi.fn(),
@@ -35,7 +36,7 @@ describe("stellarWalletKitService", () => {
         vi.clearAllMocks();
         vi.resetModules();
         kitMock.getNetwork.mockResolvedValue({ network: "TESTNET", networkPassphrase: TESTNET_PASSPHRASE });
-        kitMock.getAddress.mockResolvedValue({ address: "GADDRESS" });
+        kitMock.fetchAddress.mockResolvedValue({ address: "GADDRESS" });
     });
 
     it("initializes the kit with Networks.TESTNET exactly once, even across multiple connects", async () => {
@@ -69,10 +70,19 @@ describe("stellarWalletKitService", () => {
     });
 
     it("connect() throws when the kit returns no address", async () => {
-        kitMock.getAddress.mockResolvedValueOnce({ address: "" });
+        kitMock.fetchAddress.mockResolvedValueOnce({ address: "" });
         const service = await loadService();
 
         await expect(service.connect("freighter-id")).rejects.toThrow(/no public key/i);
+    });
+
+    it("connect() fetches the address rather than reading the kit's cache", async () => {
+        const service = await loadService();
+
+        await service.connect("freighter-id");
+
+        expect(kitMock.fetchAddress).toHaveBeenCalled();
+        expect(kitMock.getAddress).not.toHaveBeenCalled();
     });
 
     it("connect() throws when the active network is Mainnet", async () => {

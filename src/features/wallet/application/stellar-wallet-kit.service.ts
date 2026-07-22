@@ -41,8 +41,14 @@ async function assertTestnet(): Promise<void> {
     }
 }
 
+// We never call the kit's own authModal()/createButton() (those populate the
+// kit's internal address cache for us). Since iKash's modal drives selection
+// directly, every read here must go through fetchAddress() — which actually
+// asks the active module for the address (triggering Freighter's permission
+// popup, etc.) — rather than getAddress(), which only returns whatever is
+// already cached in the kit's memory and would otherwise come back empty.
 async function getAddress(): Promise<string> {
-    const { address } = await StellarWalletsKit.getAddress();
+    const { address } = await StellarWalletsKit.fetchAddress();
     if (!address) throw new Error("No public key found after connection.");
     return address;
 }

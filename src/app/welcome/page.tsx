@@ -685,53 +685,42 @@ function ConnectWalletModal({
               </div>
 
               {/* Wallet Options — driven by the shared Stellar Wallets Kit config,
-                  so adding a wallet only means editing config/wallet-options.ts */}
-              {walletOptions.filter((wallet) => wallet.enabled).map((wallet) => {
-                const isUnavailable = availability[wallet.id] === false;
+                  so adding a wallet only means editing config/wallet-options.ts.
+                  Laid out as a 2-column grid so all 6 options render within the
+                  modal without pushing it into a long scroll. */}
+              <div className="grid grid-cols-2 gap-3">
+                {walletOptions.filter((wallet) => wallet.enabled).map((wallet) => {
+                  const isUnavailable = availability[wallet.id] === false;
 
-                return (
-                  <div
-                    key={wallet.id}
-                    onClick={() => {
-                      if (isUnavailable) {
-                        window.open(wallet.url, "_blank", "noopener,noreferrer");
-                        return;
-                      }
-                      handleWalletConnect(wallet.id);
-                    }}
-                    className={`group flex items-center justify-between p-5 bg-[#18181b]/40 border border-white/5 rounded-2xl transition-all duration-300 cursor-pointer text-left ${isUnavailable ? "opacity-60" : "hover:bg-[#1d1f25] hover:border-[#BCED09] hover:scale-[1.01]"
-                      }`}
-                  >
-                    <div className="flex items-center gap-4">
+                  return (
+                    <div
+                      key={wallet.id}
+                      onClick={() => {
+                        if (isUnavailable) {
+                          window.open(wallet.url, "_blank", "noopener,noreferrer");
+                          return;
+                        }
+                        handleWalletConnect(wallet.id);
+                      }}
+                      className={`group flex flex-col items-center text-center gap-2 p-4 bg-[#18181b]/40 border border-white/5 rounded-2xl transition-all duration-300 cursor-pointer ${isUnavailable ? "opacity-60" : "hover:bg-[#1d1f25] hover:border-[#BCED09] hover:scale-[1.03]"
+                        }`}
+                    >
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-tr from-white/15 to-white/5 shadow-md overflow-hidden relative">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={wallet.icon} alt={wallet.name} className="absolute inset-0 w-full h-full object-cover" />
                       </div>
-                      <div>
-                        <h4 className="text-white font-bold text-lg leading-tight group-hover:text-[#BCED09] transition-colors">
-                          {wallet.name}
-                        </h4>
-                        <p className="text-gray-500 text-xs mt-0.5 font-light">
-                          {isUnavailable ? "Not installed — tap to get it" : wallet.description}
+                      <h4 className="text-white font-bold text-sm leading-tight group-hover:text-[#BCED09] transition-colors">
+                        {wallet.name}
+                      </h4>
+                      {isUnavailable && (
+                        <p className="text-gray-500 text-[11px] leading-tight font-light">
+                          Not installed
                         </p>
-                      </div>
+                      )}
                     </div>
-                    <svg
-                      className="w-5 h-5 text-gray-600 group-hover:text-[#BCED09] transition-colors"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
