@@ -35,7 +35,10 @@
   },
   "pnpm": {
     "overrides": {
-      "@coinbase/cdp-sdk": "1.52.0"
+      "@coinbase/cdp-sdk": "1.52.0",
+      "@bufbuild/protobuf": "2.12.1",
+      "jose": "6.2.3",
+      "viem": "2.55.2"
     }
   }
 }
