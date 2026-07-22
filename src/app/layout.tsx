@@ -3,6 +3,12 @@ import "./globals.css";
 import { NotificationProvider } from "./components/NotificationContext";
 import { UserProvider } from "../features/user/presentation/context/UserContext";
 import { WalletProvider } from "../features/wallet";
+import { Space_Grotesk } from "next/font/google";
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700']
+});
 
 export const metadata: Metadata = {
   title: "iKash",
@@ -16,7 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans">
+      <body
+        className={spaceGrotesk.className}
+      >
         <NotificationProvider>
           <UserProvider>
             <WalletProvider>

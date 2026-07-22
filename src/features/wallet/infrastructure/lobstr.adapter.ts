@@ -23,7 +23,7 @@ export const lobstrAdapter = {
     async signMessage(message: string): Promise<string> {
         const res = await lobstrSignMessage(message);
         if (!res?.signedMessage) {
-            throw new Error("No se pudo obtener la firma del mensaje.");
+            throw new Error("Could not get message signature.");
         }
         return res.signedMessage.trim();
     },

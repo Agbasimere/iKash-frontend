@@ -42,7 +42,7 @@ async function requestChallenge(publicKey: string): Promise<ChallengeResponse> {
 
     if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "No se pudo solicitar el challenge de autenticación.");
+        throw new Error(text || "Could not request authentication challenge.");
     }
 
     return (await res.json()) as ChallengeResponse;
@@ -57,7 +57,7 @@ async function requestLogin(publicKey: string, challenge: string, signature: str
 
     if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "No se pudo completar el inicio de sesión.");
+        throw new Error(text || "Could not complete login.");
     }
 
     const data = (await res.json()) as LoginResponse;
@@ -122,7 +122,7 @@ export const walletService = {
             const installed = await lobstrAdapter.isInstalled();
             if (!installed) throw new Error("LOBSTR no está instalado. Instálalo en https://lobstr.co/signer-extension");
             const key = await lobstrAdapter.getPublicKey();
-            if (!key) throw new Error("No se pudo obtener el public key. Asegúrate de tener la app LOBSTR vinculada.");
+            if (!key) throw new Error("Could not get public key. Make sure you have the LOBSTR app linked.");
             publicKey = key;
         }
 
@@ -160,7 +160,7 @@ export const walletService = {
                         const signature = await signChallenge(currentChallenge);
                         const token = await requestLogin(publicKey, currentChallenge, signature);
                         if (!token) {
-                            throw new Error("La respuesta de autenticación no incluyó un JWT.");
+                            throw new Error("Authentication response did not include a JWT.");
                         }
                         return token;
                     } catch (error) {
@@ -178,7 +178,7 @@ export const walletService = {
                     }
                 }
 
-                throw new Error("No se pudo completar el inicio de sesión.");
+                throw new Error("Could not complete login.");
             } catch (error) {
                 if (isSignatureCancelled(error)) {
                     throw new Error("Wallet signature is required to verify ownership and complete login.");

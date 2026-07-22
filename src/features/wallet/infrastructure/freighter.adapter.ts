@@ -68,7 +68,7 @@ export const freighterAdapter = {
             return Buffer.from(bytes).toString("base64");
         }
 
-        throw new Error("No se pudo obtener la firma del mensaje.");
+        throw new Error("Could not get message signature.");
     },
 
     // Firma una transacción XDR con Freighter
