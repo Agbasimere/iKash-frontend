@@ -72,6 +72,17 @@ export const walletService = {
         }
     },
 
+    async signMessage(message: string): Promise<string> {
+        const provider = localStorage.getItem(PROVIDER_KEY) as WalletProvider | null;
+        const publicKey = localStorage.getItem(PUBLICKEY_KEY);
+        if (!provider || !publicKey) throw new Error("No wallet connected");
+
+        if (provider === "freighter") {
+            return await freighterAdapter.signMessage(message, publicKey);
+        }
+        return await lobstrAdapter.signMessage(message);
+    },
+
     clearSession() {
         localStorage.removeItem(PROVIDER_KEY);
         localStorage.removeItem(PUBLICKEY_KEY);

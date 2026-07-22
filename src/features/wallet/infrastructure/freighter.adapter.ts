@@ -3,6 +3,7 @@ import {
     isAllowed,
     requestAccess,
     getAddress,
+    signMessage,
     signTransaction,
 } from "@stellar/freighter-api";
 
@@ -44,6 +45,21 @@ export const freighterAdapter = {
         } catch {
             return null;
         }
+    },
+
+    // Signs the authentication challenge with the selected Freighter account.
+    async signMessage(message: string, address: string): Promise<string> {
+        const res = await signMessage(message, { address });
+        if (res.error) {
+            const msg = typeof res.error === "string"
+                ? res.error
+                : res.error.message ?? JSON.stringify(res.error);
+            throw new Error(msg);
+        }
+        if (!res.signedMessage) throw new Error("Freighter did not return a signature");
+        return typeof res.signedMessage === "string"
+            ? res.signedMessage
+            : res.signedMessage.toString("base64");
     },
 
     // Firma una transacción XDR con Freighter
