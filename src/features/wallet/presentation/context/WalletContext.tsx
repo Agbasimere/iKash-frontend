@@ -100,16 +100,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
 
             setState({ publicKey, provider, isConnected: true, isLoading: false, error: null });
-            
-            // Auth logic: Get temporary JWT
-            const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ publicKey }),
-            });
-            if (loginRes.ok) {
-                const { access_token } = await loginRes.json();
-                setAccessToken(access_token);
+
+            const token = await walletService.authenticate(publicKey);
+            if (token) {
+                setAccessToken(token);
             }
 
             // Onboarding logic
