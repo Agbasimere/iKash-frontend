@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Download, FileText, FileSpreadsheet, Check, AlertCircle, Loader2, ChevronDown } from "lucide-react";
+import { logger } from "../utils/logger";
 
 interface TransactionExportMenuProps {
     disabled?: boolean;
@@ -38,9 +39,10 @@ export function TransactionExportMenu({ disabled = false, onExport }: Transactio
             // Auto hide success banner after 3 seconds
             setTimeout(() => setExportStatus("idle"), 3000);
         } catch (error) {
-            console.error("Export failed:", error);
+            const errMsg = error instanceof Error ? error.message : "Export failed";
+            logger.error({ format, error }, "Export failed");
             setExportStatus("error");
-            setErrorMessage(error instanceof Error ? error.message : "Export failed");
+            setErrorMessage(errMsg);
             // Auto hide error banner after 5 seconds
             setTimeout(() => setExportStatus("idle"), 5000);
         } finally {
@@ -111,7 +113,7 @@ export function TransactionExportMenu({ disabled = false, onExport }: Transactio
                 {exportStatus === "error" && (
                     <div className="absolute right-0 top-14 z-50 flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider shadow-lg animate-in fade-in duration-200">
                         <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span className="max-w-[200px] truncate">{errorMessage || "Export failed"}</span>
+                        <span className="max-w-[200px] truncate">{errorMessage}</span>
                     </div>
                 )}
             </div>
