@@ -3,8 +3,8 @@ import {
     isAllowed,
     requestAccess,
     getAddress,
-    signMessage,
     signTransaction,
+    signMessage as freighterSignMessage,
 } from "@stellar/freighter-api";
 
 export const freighterAdapter = {
@@ -47,19 +47,29 @@ export const freighterAdapter = {
         }
     },
 
-    // Signs the authentication challenge with the selected Freighter account.
     async signMessage(message: string, address: string): Promise<string> {
-        const res = await signMessage(message, { address });
-        if (res.error) {
-            const msg = typeof res.error === "string"
-                ? res.error
-                : res.error.message ?? JSON.stringify(res.error);
+        const res = await freighterSignMessage(message, { address });
+
+        if (typeof res === "object" && res !== null && "error" in res && res.error) {
+            const msg = typeof res.error === "string" ? res.error : (res.error?.message ?? JSON.stringify(res.error));
             throw new Error(msg);
         }
-        if (!res.signedMessage) throw new Error("Freighter did not return a signature");
-        return typeof res.signedMessage === "string"
-            ? res.signedMessage
-            : res.signedMessage.toString("base64");
+
+        const signedMessage = typeof res === "string"
+            ? res
+            : res?.signedMessage;
+
+        if (typeof signedMessage === "string") {
+            return signedMessage.trim();
+        }
+
+        if (signedMessage && typeof signedMessage === "object" && "byteLength" in signedMessage) {
+            const bytes = signedMessage as Uint8Array;
+            const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+            return btoa(binary);
+        }
+
+        throw new Error("Could not get message signature.");
     },
 
     // Firma una transacción XDR con Freighter

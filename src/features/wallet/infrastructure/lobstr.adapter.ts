@@ -1,9 +1,4 @@
-import {
-    isConnected,
-    getPublicKey,
-    signMessage as lobstrSignMessage,
-    signTransaction as lobstrSignTransaction,
-} from "@lobstrco/signer-extension-api";
+import { isConnected, getPublicKey, signTransaction as lobstrSignTransaction, signMessage as lobstrSignMessage } from "@lobstrco/signer-extension-api";
 
 export const lobstrAdapter = {
     //Verifica si el usuario tiene la extensión LOBSTR instalada.
@@ -25,11 +20,12 @@ export const lobstrAdapter = {
         }
     },
 
-    // Signs the authentication challenge with LOBSTR.
     async signMessage(message: string): Promise<string> {
         const res = await lobstrSignMessage(message);
-        if (!res?.signedMessage) throw new Error("LOBSTR did not return a signature");
-        return res.signedMessage;
+        if (!res?.signedMessage) {
+            throw new Error("Could not get message signature.");
+        }
+        return res.signedMessage.trim();
     },
 
     // Firma una transacción XDR con LOBSTR

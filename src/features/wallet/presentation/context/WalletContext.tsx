@@ -25,46 +25,6 @@ const initialState: WalletState = {
     error: null,
 };
 
-async function readApiError(response: Response, fallback: string): Promise<string> {
-    try {
-        const body = await response.json() as { message?: string };
-        return body.message ?? fallback;
-    } catch {
-        return fallback;
-    }
-}
-
-async function authenticateWallet(publicKey: string): Promise<string> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) throw new Error("Backend API URL is not configured");
-
-    const challengeRes = await fetch(`${apiUrl}/auth/challenge`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publicKey }),
-    });
-    if (!challengeRes.ok) {
-        throw new Error(await readApiError(challengeRes, "Unable to create wallet challenge"));
-    }
-
-    const { challenge } = await challengeRes.json() as { challenge?: string };
-    if (!challenge) throw new Error("Backend returned an invalid wallet challenge");
-
-    const signature = await walletService.signMessage(challenge);
-    const loginRes = await fetch(`${apiUrl}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publicKey, challenge, signature }),
-    });
-    if (!loginRes.ok) {
-        throw new Error(await readApiError(loginRes, "Wallet authentication failed"));
-    }
-
-    const { access_token } = await loginRes.json() as { access_token?: string };
-    if (!access_token) throw new Error("Backend did not return an access token");
-    return access_token;
-}
-
 export function WalletProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<WalletState>(initialState);
 
@@ -140,10 +100,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
 
             setState({ publicKey, provider, isConnected: true, isLoading: false, error: null });
-            
-            // Prove wallet ownership before requesting the user-scoped JWT.
-            const accessToken = await authenticateWallet(publicKey);
-            setAccessToken(accessToken);
+
+            const token = await walletService.authenticate(publicKey);
+            if (token) {
+                setAccessToken(token);
+            }
 
             // Onboarding logic
             const userAccount = await getOrCreateByWallet(publicKey);
