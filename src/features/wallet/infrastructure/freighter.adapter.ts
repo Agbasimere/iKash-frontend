@@ -47,8 +47,8 @@ export const freighterAdapter = {
         }
     },
 
-    async signMessage(message: string): Promise<string> {
-        const res = await freighterSignMessage(message);
+    async signMessage(message: string, address: string): Promise<string> {
+        const res = await freighterSignMessage(message, { address });
 
         if (typeof res === "object" && res !== null && "error" in res && res.error) {
             const msg = typeof res.error === "string" ? res.error : (res.error?.message ?? JSON.stringify(res.error));
@@ -65,7 +65,8 @@ export const freighterAdapter = {
 
         if (signedMessage && typeof signedMessage === "object" && "byteLength" in signedMessage) {
             const bytes = signedMessage as Uint8Array;
-            return Buffer.from(bytes).toString("base64");
+            const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+            return btoa(binary);
         }
 
         throw new Error("Could not get message signature.");

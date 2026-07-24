@@ -120,7 +120,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
-            setState((s) => ({ ...s, isLoading: false, error: msg }));
+            walletService.clearSession();
+            setState({ ...initialState, isLoading: false, error: msg });
             throw err; // Re-throw to be caught by the UI component
         }
     }, [getOrCreateByWallet, setCurrentUser, setAccessToken, router]);

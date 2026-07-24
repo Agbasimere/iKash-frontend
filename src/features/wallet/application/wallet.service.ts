@@ -18,17 +18,42 @@ interface LoginResponse {
 }
 
 function getApiBaseUrl(): string {
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) throw new Error("Backend API URL is not configured.");
+    return apiUrl;
 }
 
 function normalizeSignature(signature: string): string {
     return signature.trim();
 }
 
+class WalletAuthError extends Error {
+    constructor(
+        message: string,
+        readonly status: number,
+        readonly code?: string,
+    ) {
+        super(message);
+        this.name = "WalletAuthError";
+    }
+}
+
+async function createAuthError(response: Response, fallback: string): Promise<WalletAuthError> {
+    const text = await response.text();
+    try {
+        const body = JSON.parse(text) as { error?: string; message?: string };
+        return new WalletAuthError(body.message || fallback, response.status, body.error);
+    } catch {
+        return new WalletAuthError(text || fallback, response.status);
+    }
+}
+
 function isExpiredChallengeError(error: unknown): boolean {
+    if (error instanceof WalletAuthError && error.code === "INVALID_CHALLENGE") {
+        return true;
+    }
     const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
-    const lower = message.toLowerCase();
-    return lower.includes("expired") || lower.includes("401") || lower.includes("unauthorized");
+    return message.toLowerCase().includes("expired");
 }
 
 let authInFlight: Promise<string> | null = null;
@@ -41,8 +66,7 @@ async function requestChallenge(publicKey: string): Promise<ChallengeResponse> {
     });
 
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Could not request authentication challenge.");
+        throw await createAuthError(res, "Could not request authentication challenge.");
     }
 
     return (await res.json()) as ChallengeResponse;
@@ -56,8 +80,7 @@ async function requestLogin(publicKey: string, challenge: string, signature: str
     });
 
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Could not complete login.");
+        throw await createAuthError(res, "Could not complete login.");
     }
 
     const data = (await res.json()) as LoginResponse;
@@ -66,10 +89,11 @@ async function requestLogin(publicKey: string, challenge: string, signature: str
 
 async function signChallenge(challenge: string): Promise<string> {
     const provider = localStorage.getItem(PROVIDER_KEY) as WalletProvider | null;
-    if (!provider) throw new Error("No wallet connected");
+    const publicKey = localStorage.getItem(PUBLICKEY_KEY);
+    if (!provider || !publicKey) throw new Error("No wallet connected");
 
     if (provider === "freighter") {
-        const signed = await freighterAdapter.signMessage(challenge);
+        const signed = await freighterAdapter.signMessage(challenge, publicKey);
         return normalizeSignature(signed);
     }
 
