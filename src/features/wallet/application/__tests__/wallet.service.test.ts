@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isSignatureCancelled, walletService } from "../wallet.service";
 import { freighterAdapter } from "../../infrastructure/freighter.adapter";
-import { lobstrAdapter } from "../../infrastructure/lobstr.adapter";
 
 const fetchMock = vi.fn();
 
@@ -50,6 +49,8 @@ describe("walletService.authenticate", () => {
         fetchMock.mockReset();
         vi.clearAllMocks();
         localStorage.setItem("wallet:provider", "freighter");
+        localStorage.setItem("wallet:publicKey", "G123");
+        process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:3001";
     });
 
     it("requests a challenge, signs it, and logs in with the returned token", async () => {
@@ -61,9 +62,9 @@ describe("walletService.authenticate", () => {
         const token = await walletService.authenticate("G123");
 
         expect(token).toBe("jwt-token");
-        expect(vi.mocked(freighterAdapter.signMessage)).toHaveBeenCalledWith("abc123");
+        expect(vi.mocked(freighterAdapter.signMessage)).toHaveBeenCalledWith("abc123", "G123");
         expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:3000/auth/login", expect.objectContaining({
+        expect(fetchMock).toHaveBeenNthCalledWith(2, "http://127.0.0.1:3001/auth/login", expect.objectContaining({
             method: "POST",
             body: JSON.stringify({ publicKey: "G123", challenge: "abc123", signature: "signed-message" }),
         }));

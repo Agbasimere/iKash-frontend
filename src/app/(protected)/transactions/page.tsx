@@ -17,7 +17,8 @@ export default function TransactionsPage() {
     const router = useRouter();
 
     // Filters states
-    const [statusFilter, setStatusFilter] = useState("COMPLETED"); // Default to completed transactions
+    // Default to completed transactions
+    const [statusFilter, setStatusFilter] = useState("COMPLETED");
     const [operationFilter, setOperationFilter] = useState("All");
     const [startDateFilter, setStartDateFilter] = useState("");
     const [endDateFilter, setEndDateFilter] = useState("");
@@ -273,7 +274,7 @@ export default function TransactionsPage() {
                                         return (
                                             <div
                                                 key={o.orderId}
-                                                onClick={() => router.push("/p2p/orders/" + o.orderId.replace(/-/g, ""))}
+                                                onClick={() => router.push("/p2p/orders/" + o.orderId)}
                                                 className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1.2fr_1fr_1.2fr_40px] gap-4 p-6 border-b border-[rgba(22,22,24,0.05)] items-center hover:bg-[#1C1C1F] transition-colors cursor-pointer select-none"
                                             >
                                                 {/* Asset & Type */}
