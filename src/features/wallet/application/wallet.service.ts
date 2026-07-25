@@ -4,6 +4,97 @@ import { stellarWalletKitService } from "./stellar-wallet-kit.service";
 const WALLET_ID_KEY = "wallet:provider";
 const PUBLICKEY_KEY = "wallet:publicKey";
 
+interface ChallengeResponse {
+    challenge: string;
+    expiresAt?: string;
+}
+
+interface LoginResponse {
+    access_token?: string;
+    token?: string;
+    jwt?: string;
+}
+
+function getApiBaseUrl(): string {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) throw new Error("Backend API URL is not configured.");
+    return apiUrl;
+}
+
+function normalizeSignature(signature: string): string {
+    return signature.trim();
+}
+
+class WalletAuthError extends Error {
+    constructor(
+        message: string,
+        readonly status: number,
+        readonly code?: string,
+    ) {
+        super(message);
+        this.name = "WalletAuthError";
+    }
+}
+
+async function createAuthError(response: Response, fallback: string): Promise<WalletAuthError> {
+    const text = await response.text();
+    try {
+        const body = JSON.parse(text) as { error?: string; message?: string };
+        return new WalletAuthError(body.message || fallback, response.status, body.error);
+    } catch {
+        return new WalletAuthError(text || fallback, response.status);
+    }
+}
+
+function isExpiredChallengeError(error: unknown): boolean {
+    if (error instanceof WalletAuthError && error.code === "INVALID_CHALLENGE") {
+        return true;
+    }
+    const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+    return message.toLowerCase().includes("expired");
+}
+
+let authInFlight: Promise<string> | null = null;
+
+async function requestChallenge(publicKey: string): Promise<ChallengeResponse> {
+    const res = await fetch(`${getApiBaseUrl()}/auth/challenge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicKey }),
+    });
+
+    if (!res.ok) {
+        throw await createAuthError(res, "Could not request authentication challenge.");
+    }
+
+    return (await res.json()) as ChallengeResponse;
+}
+
+async function requestLogin(publicKey: string, challenge: string, signature: string): Promise<string> {
+    const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicKey, challenge, signature }),
+    });
+
+    if (!res.ok) {
+        throw await createAuthError(res, "Could not complete login.");
+    }
+
+    const data = (await res.json()) as LoginResponse;
+    return data.access_token || data.token || data.jwt || "";
+}
+
+async function signChallenge(challenge: string): Promise<string> {
+    const walletId = localStorage.getItem(WALLET_ID_KEY);
+    const publicKey = localStorage.getItem(PUBLICKEY_KEY);
+    if (!walletId || !publicKey) throw new Error("No wallet connected");
+
+    stellarWalletKitService.setWallet(walletId);
+    const signed = await stellarWalletKitService.signMessage(challenge, publicKey);
+    return normalizeSignature(signed);
+}
+
 export const walletService = {
     // Restaura sesión desde localStorage. Nunca asume que una wallet
     // previamente seleccionada sigue conectada: vuelve a pedir la dirección
@@ -46,6 +137,57 @@ export const walletService = {
 
         stellarWalletKitService.setWallet(walletId);
         return await stellarWalletKitService.signTransaction(xdr, address ?? undefined);
+    },
+
+    async authenticate(publicKey: string): Promise<string> {
+        if (authInFlight) {
+            return authInFlight;
+        }
+
+        authInFlight = (async () => {
+            let currentChallenge = "";
+
+            try {
+                const challengeResponse = await requestChallenge(publicKey);
+                currentChallenge = challengeResponse.challenge;
+
+                for (let attempt = 0; attempt < 2; attempt += 1) {
+                    try {
+                        const signature = await signChallenge(currentChallenge);
+                        const token = await requestLogin(publicKey, currentChallenge, signature);
+                        if (!token) {
+                            throw new Error("Authentication response did not include a JWT.");
+                        }
+                        return token;
+                    } catch (error) {
+                        if (attempt === 0 && isExpiredChallengeError(error)) {
+                            const freshChallenge = await requestChallenge(publicKey);
+                            currentChallenge = freshChallenge.challenge;
+                            continue;
+                        }
+
+                        if (isSignatureCancelled(error)) {
+                            throw new Error("Wallet signature is required to verify ownership and complete login.");
+                        }
+
+                        throw error;
+                    }
+                }
+
+                throw new Error("Could not complete login.");
+            } catch (error) {
+                if (isSignatureCancelled(error)) {
+                    throw new Error("Wallet signature is required to verify ownership and complete login.");
+                }
+                throw error;
+            }
+        })();
+
+        try {
+            return await authInFlight;
+        } finally {
+            authInFlight = null;
+        }
     },
 
     clearSession() {

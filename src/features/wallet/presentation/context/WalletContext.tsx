@@ -92,15 +92,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
             setState({ publicKey, walletId, isConnected: true, isLoading: false, error: null });
 
-            // Auth logic: Get temporary JWT
-            const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ publicKey }),
-            });
-            if (loginRes.ok) {
-                const { access_token } = await loginRes.json();
-                setAccessToken(access_token);
+            // Challenge-response auth: prove ownership of the address via a
+            // signed challenge rather than trusting the public key alone.
+            const token = await walletService.authenticate(publicKey);
+            if (token) {
+                setAccessToken(token);
             }
 
             // Onboarding logic
@@ -117,7 +113,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
         } catch (err) {
             const msg = mapWalletError(err);
-            setState((s) => ({ ...s, isLoading: false, error: msg }));
+            walletService.clearSession();
+            setState({ ...initialState, isLoading: false, error: msg });
             notify("error", msg);
             throw err; // Re-throw to be caught by the UI component
         }

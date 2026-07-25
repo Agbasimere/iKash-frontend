@@ -16,6 +16,7 @@ vi.mock("../../../application/wallet.service", () => ({
         signTransaction: vi.fn(),
         restoreSession: vi.fn(),
         clearSession: vi.fn(),
+        authenticate: vi.fn(),
     },
     isSignatureCancelled: vi.fn(),
 }));
@@ -50,15 +51,13 @@ describe("WalletContext", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockedWalletService.restoreSession.mockResolvedValue(null);
+        mockedWalletService.authenticate.mockResolvedValue("jwt-token");
         mockGetOrCreateByWallet.mockResolvedValue({ pendingAccountInfo: false });
 
         global.fetch = vi.fn(async (input: RequestInfo | URL) => {
             const url = String(input);
             if (url.includes("horizon-testnet.stellar.org")) {
                 return new Response(JSON.stringify({}), { status: 200 });
-            }
-            if (url.includes("/auth/login")) {
-                return new Response(JSON.stringify({ access_token: "jwt-token" }), { status: 200 });
             }
             return new Response(JSON.stringify({}), { status: 200 });
         }) as unknown as typeof fetch;
@@ -79,8 +78,29 @@ describe("WalletContext", () => {
         expect(result.current.walletId).toBe("freighter-id");
         expect(result.current.isConnected).toBe(true);
         expect(result.current.error).toBeNull();
+        expect(mockedWalletService.authenticate).toHaveBeenCalledWith("GABCPUBLICKEY");
         expect(mockSetAccessToken).toHaveBeenCalledWith("jwt-token");
         expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
+
+    it("clears the session and surfaces an error when challenge authentication fails", async () => {
+        mockedWalletService.connect.mockResolvedValueOnce("GABCPUBLICKEY");
+        mockedWalletService.authenticate.mockRejectedValueOnce(
+            new Error("Wallet signature is required to verify ownership and complete login.")
+        );
+
+        const { result } = renderWalletContext();
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        await act(async () => {
+            await expect(result.current.connect("freighter-id")).rejects.toBeTruthy();
+        });
+
+        expect(mockedWalletService.clearSession).toHaveBeenCalled();
+        expect(mockSetAccessToken).not.toHaveBeenCalled();
+        expect(mockGetOrCreateByWallet).not.toHaveBeenCalled();
+        expect(result.current.isConnected).toBe(false);
+        expect(result.current.error).toMatch(/signature is required/i);
     });
 
     it("redirects to setupAccount when onboarding is pending", async () => {

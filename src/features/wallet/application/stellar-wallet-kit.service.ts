@@ -84,6 +84,17 @@ export const stellarWalletKitService = {
         return signedTxXdr;
     },
 
+    // Used for the backend's login challenge: sign an arbitrary string
+    // (not a transaction) to prove ownership of the address, per SEP-43.
+    async signMessage(message: string, address?: string): Promise<string> {
+        await assertTestnet();
+        const { signedMessage } = await StellarWalletsKit.signMessage(message, {
+            networkPassphrase: Networks.TESTNET,
+            address,
+        });
+        return signedMessage.trim();
+    },
+
     async refreshSupportedWallets(): Promise<ISupportedWallet[]> {
         ensureInitialized();
         try {

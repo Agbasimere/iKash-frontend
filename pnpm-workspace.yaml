@@ -1,6 +1,7 @@
 allowBuilds:
   sharp: true
   unrs-resolver: true
+  core-js: true
   "@reown/appkit": true
   "@stellar/stellar-sdk": true
   blake-hash: true
