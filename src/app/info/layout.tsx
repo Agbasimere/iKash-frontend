@@ -125,7 +125,7 @@ export default function InfoLayout({
       {/* Footer */}
       <footer className="w-full bg-[#010308] border-t border-[#ffffff05] py-8 text-center text-xs text-gray-500 tracking-wider font-medium">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span>© 2024 IKASH FINANCIAL. POWERED BY STELLAR BLOCKCHAIN.</span>
+          <span>© 2026 IKASH FINANCIAL. POWERED BY STELLAR BLOCKCHAIN.</span>
           <div className="flex gap-6">
             <Link href="/" className="hover:text-white transition-colors">
               Platform
