@@ -1,4 +1,4 @@
-import { Compass, Zap, Layers, RefreshCw } from "lucide-react";
+import { Compass } from "lucide-react";
 
 export default function PlatformOverviewPage() {
   return (
@@ -38,7 +38,7 @@ export default function PlatformOverviewPage() {
               The platform operates on a two-component logical architecture: a client-side frontend application and a server-side backend orchestration layer. 
             </p>
             <p>
-              The client application serves as the exclusive signing authority. It is the user-facing interface where wallet connections reside and where all transaction signing occurs. When the client receives a prepared External Data Representation (XDR) from the backend, it delegates the signature to the user's locally installed wallet (via the Stellar Wallet Kit), and returns the signed payload.
+              The client application serves as the exclusive signing authority. It is the user-facing interface where wallet connections reside and where all transaction signing occurs. When the client receives a prepared External Data Representation (XDR) from the backend, it delegates the signature to the user&apos;s locally installed wallet (via the Stellar Wallet Kit), and returns the signed payload.
             </p>
             <p>
               The backend orchestration layer acts purely as a state manager and coordinator. Its access is limited to reading on-chain state, preparing unsigned transactions, and maintaining relational data. It relies on the Stellar SDK to construct XDR envelopes but lacks the capability to authorize them. Once a transaction is signed client-side, the backend relays the payload to the network or delegates execution to Trustless Work.

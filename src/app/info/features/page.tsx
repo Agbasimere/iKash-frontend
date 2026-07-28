@@ -1,4 +1,4 @@
-import { BookOpen, Handshake, ShieldAlert, FileText } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export default function PlatformFeaturesPage() {
   return (
@@ -37,10 +37,10 @@ export default function PlatformFeaturesPage() {
               The transaction lifecycle begins when a seller accepts an existing offer. The backend constructs an unsigned XDR transaction required to fund the newly deployed escrow. The frontend receives this XDR, requests the seller to authorize it locally via their connected wallet, and submits the signed transaction. This firmly places the seller as the actor who locks the cryptocurrency into the escrow.
             </p>
             <p>
-              Following the on-chain funding, the fiat settlement occurs as an off-chain interaction. The buyer transfers the agreed fiat amount to the seller's registered payment method (e.g., bank transfer or local payment rails) and uploads the confirmation receipt to the platform. 
+              Following the on-chain funding, the fiat settlement occurs as an off-chain interaction. The buyer transfers the agreed fiat amount to the seller&apos;s registered payment method (e.g., bank transfer or local payment rails) and uploads the confirmation receipt to the platform. 
             </p>
             <p>
-              In the final phase, upon verifying receipt of the fiat funds in their personal account, the seller authorizes the release of the escrowed crypto. The backend obtains an unsigned release XDR from Trustless Work, the seller signs it client-side, and the backend broadcasts the signature, triggering the smart contract to transfer the locked assets to the buyer's wallet.
+              In the final phase, upon verifying receipt of the fiat funds in their personal account, the seller authorizes the release of the escrowed crypto. The backend obtains an unsigned release XDR from Trustless Work, the seller signs it client-side, and the backend broadcasts the signature, triggering the smart contract to transfer the locked assets to the buyer&apos;s wallet.
             </p>
           </div>
         </section>
@@ -52,7 +52,7 @@ export default function PlatformFeaturesPage() {
               To accommodate a diverse user base without enforcing a single wallet provider, the frontend application integrates the Stellar Wallet Kit (SWK). SWK acts as a unified interface layer, allowing users to connect using their preferred Stellar-compatible browser extensions (such as Freighter, Albedo, or LOBSTR).
             </p>
             <p>
-              This integration abstracts the specific wallet connection logic while preserving the platform's non-custodial guarantee. Irrespective of the wallet chosen, the private keys remain secured within the user's local environment, and all cryptographic signatures requested by the iKash backend are executed securely within that isolated context.
+              This integration abstracts the specific wallet connection logic while preserving the platform&apos;s non-custodial guarantee. Irrespective of the wallet chosen, the private keys remain secured within the user&apos;s local environment, and all cryptographic signatures requested by the iKash backend are executed securely within that isolated context.
             </p>
           </div>
         </section>
