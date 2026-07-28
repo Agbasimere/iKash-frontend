@@ -925,10 +925,10 @@ export default function HomePage() {
       <CallToActionSection handleConnectWallet={handleConnectWallet} />
 
       {/* --- FOOTER SECTION --- */}
-      <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-24 pb-12">
-        <div className="max-w-7xl w-full mx-auto px-4 md:px-8 space-y-16">
+      <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-16 pb-8">
+        <div className="max-w-7xl w-full mx-auto px-4 md:px-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Col 1: Brand Info + Connect */}
+            {/* Col 1: Brand Info */}
             <div className="space-y-6">
               <Image
                 src="/ikashlogotipo.svg"
@@ -940,7 +940,11 @@ export default function HomePage() {
                 The ultimate gateway for Stellar-based financial instruments and
                 wealth optimization.
               </p>
-              <div className="flex items-center gap-4 pt-2">
+            </div>
+
+            {/* Col 2: Social Icons */}
+            <div className="space-y-6 md:text-right flex flex-col md:items-end justify-center">
+              <div className="flex items-center gap-4">
                 <Link
                   href="https://github.com/iKa-h"
                   className="w-10 h-10 rounded-lg bg-[#18181b] flex items-center justify-center text-gray-300 hover:bg-[#BCED09] hover:text-[#010308] hover:shadow-[0_0_15px_rgba(188,237,9,0.3)] transition-all duration-300"
@@ -968,29 +972,15 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
-
-            {/* Col 2: Quick Links */}
-            <div className="space-y-6 md:text-right">
-              <h4 className="text-white text-base font-bold tracking-wider uppercase">
-                Quick Links
-              </h4>
-              <ul className="space-y-4">
-                <li>
-                  <Link
-                    href="/info"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Docs
-                  </Link>
-                </li>
-              </ul>
-            </div>
           </div>
 
           {/* Bottom copyright row */}
-          <div className="border-t border-[#ffffff05] pt-12 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-500 font-bold tracking-widest">
+          <div className="border-t border-[#ffffff05] pt-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-500 font-bold tracking-widest">
             <span>© 2026 IKASH FINANCIAL. ALL RIGHTS RESERVED.</span>
             <div className="flex items-center gap-8">
+              <Link href="/info" className="hover:text-white transition-colors">
+                DOCS
+              </Link>
               <Link href="/privacy" className="hover:text-white transition-colors">
                 PRIVACY
               </Link>
