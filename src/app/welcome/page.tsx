@@ -925,102 +925,28 @@ export default function HomePage() {
       <CallToActionSection handleConnectWallet={handleConnectWallet} />
 
       {/* --- FOOTER SECTION --- */}
-      <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-24 pb-12">
-        <div className="max-w-7xl w-full mx-auto px-4 md:px-8 space-y-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+      <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-16 pb-8">
+        <div className="max-w-7xl w-full mx-auto px-4 md:px-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {/* Col 1: Brand Info */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/icono-ikash.svg"
-                  alt="Logo de ikash"
-                  width={42}
-                  height={42}
-                />
-                <span className="text-2xl font-black tracking-tighter text-white">
-                  iKa$h
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm font-light leading-relaxed">
+              <Image
+                src="/ikashlogotipo.svg"
+                alt="Logo de ikash"
+                width={100}
+                height={45}
+              />
+              <p className="text-gray-400 text-sm font-light leading-relaxed max-w-sm">
                 The ultimate gateway for Stellar-based financial instruments and
                 wealth optimization.
               </p>
             </div>
 
-            {/* Col 2: Platform Links */}
-            <div className="space-y-6">
-              <h4 className="text-white text-base font-bold tracking-wider uppercase">
-                Platform
-              </h4>
-              <ul className="space-y-4">
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Markets
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Trade
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Governance
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 3: Resources Links */}
-            <div className="space-y-6">
-              <h4 className="text-white text-base font-bold tracking-wider uppercase">
-                Resources
-              </h4>
-              <ul className="space-y-4">
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Documentation
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    Security Audit
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-400 hover:text-[#BCED09] text-sm transition-colors"
-                  >
-                    API Reference
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 4: Connect Links */}
-            <div className="space-y-6">
-              <h4 className="text-white text-base font-bold tracking-wider uppercase">
-                Connect
-              </h4>
+            {/* Col 2: Social Icons */}
+            <div className="space-y-6 md:text-right flex flex-col md:items-end justify-center">
               <div className="flex items-center gap-4">
                 <Link
-                  href="#"
+                  href="https://github.com/iKa-h"
                   className="w-10 h-10 rounded-lg bg-[#18181b] flex items-center justify-center text-gray-300 hover:bg-[#BCED09] hover:text-[#010308] hover:shadow-[0_0_15px_rgba(188,237,9,0.3)] transition-all duration-300"
                 >
                   <svg
@@ -1033,13 +959,13 @@ export default function HomePage() {
                   </svg>
                 </Link>
                 <Link
-                  href="#"
+                  href="https://stellar.org"
                   className="w-10 h-10 rounded-lg bg-[#18181b] flex items-center justify-center text-gray-300 hover:bg-[#BCED09] hover:text-[#010308] hover:shadow-[0_0_15px_rgba(188,237,9,0.3)] transition-all duration-300"
                 >
                   <Globe className="w-5 h-5" />
                 </Link>
                 <Link
-                  href="#"
+                  href="https://stellar.expert"
                   className="w-10 h-10 rounded-lg bg-[#18181b] flex items-center justify-center text-gray-300 hover:bg-[#BCED09] hover:text-[#010308] hover:shadow-[0_0_15px_rgba(188,237,9,0.3)] transition-all duration-300"
                 >
                   <Share2 className="w-5 h-5" />
@@ -1049,17 +975,17 @@ export default function HomePage() {
           </div>
 
           {/* Bottom copyright row */}
-          <div className="border-t border-[#ffffff05] pt-12 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-500 font-bold tracking-widest">
-            <span>© 2024 IKASH FINANCIAL. ALL RIGHTS RESERVED.</span>
+          <div className="border-t border-[#ffffff05] pt-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-500 font-bold tracking-widest">
+            <span>© 2026 IKASH FINANCIAL. ALL RIGHTS RESERVED.</span>
             <div className="flex items-center gap-8">
-              <Link href="#" className="hover:text-white transition-colors">
+              <Link href="/info" className="hover:text-white transition-colors">
+                DOCS
+              </Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">
                 PRIVACY
               </Link>
-              <Link href="#" className="hover:text-white transition-colors">
+              <Link href="/terms" className="hover:text-white transition-colors">
                 TERMS
-              </Link>
-              <Link href="#" className="hover:text-white transition-colors">
-                COOKIES
               </Link>
             </div>
           </div>
