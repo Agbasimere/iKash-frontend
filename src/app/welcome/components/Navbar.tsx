@@ -30,11 +30,6 @@ export function Navbar({ onConnectClick }: { onConnectClick?: () => void }) {
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
-	// Close mobile menu when route changes
-	useEffect(() => {
-		setMobileMenuOpen(false);
-	}, [pathname]);
-
 	return (
 		<nav className="w-full bg-[#010308CC] border-b border-[#FFFFFF1A] backdrop-blur-md sticky top-0 z-50 px-4 md:px-8">
 			<div className="max-w-7xl mx-auto flex items-center justify-between h-16">
@@ -120,6 +115,7 @@ export function Navbar({ onConnectClick }: { onConnectClick?: () => void }) {
 								<li key={link.label}>
 									<Link
 										href={link.href}
+										onClick={() => setMobileMenuOpen(false)}
 										className={`block text-lg transition-colors duration-150 ${isActive
 											? "text-[#BCED09] font-medium"
 											: "text-gray-400 hover:text-white font-medium"

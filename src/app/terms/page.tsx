@@ -84,7 +84,7 @@ export default function TermsOfServicePage() {
               In the event of a disagreement regarding a fiat settlement, either party may initiate a dispute. During a dispute, a designated iKash platform support key may act as a decentralized resolver within the Trustless Work smart contract. 
             </p>
             <p className="text-sm leading-relaxed text-gray-400 font-light">
-              iKash will review the chat logs and uploaded payment evidence to determine the rightful owner of the escrowed assets. You agree that iKash's decision in resolving disputes is final and binding. iKash assumes no liability for losses incurred due to fraudulent off-chain transfers if sufficient evidence is not provided.
+              iKash will review the chat logs and uploaded payment evidence to determine the rightful owner of the escrowed assets. You agree that iKash&apos;s decision in resolving disputes is final and binding. iKash assumes no liability for losses incurred due to fraudulent off-chain transfers if sufficient evidence is not provided.
             </p>
           </section>
 

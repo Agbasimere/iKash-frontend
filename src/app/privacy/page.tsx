@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc pl-5 space-y-3 text-sm text-gray-400 font-light">
               <li><strong className="text-gray-300">Blockchain Identifiers:</strong> Your Stellar public key (wallet address), which acts as your primary identifier.</li>
-              <li><strong className="text-gray-300">KYC Status:</strong> An anonymized Didit session identifier and your binary verification status (e.g., "Approved" or "Declined").</li>
+              <li><strong className="text-gray-300">KYC Status:</strong> An anonymized Didit session identifier and your binary verification status (e.g., &quot;Approved&quot; or &quot;Declined&quot;).</li>
               <li><strong className="text-gray-300">Payment Methods:</strong> Fiat payment details you register (e.g., bank account numbers, beneficiary names, national ID numbers) required for counterparties to send you funds.</li>
               <li><strong className="text-gray-300">Transactional Data:</strong> Offers created, order matching history, and escrow state metadata (e.g., contract IDs, transaction hashes).</li>
               <li><strong className="text-gray-300">Communication & Evidence:</strong> Encrypted chat message logs tied to active orders, and URLs linking to payment evidence (receipts/screenshots) securely stored in Google Cloud Storage.</li>
