@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { Users } from '../../models/users';
 import { walletService } from '../../../wallet/application/wallet.service';
+import { setTokenProvider, setUnauthorizedHandler } from '@/lib/api';
 
 function isTokenExpired(token: string | null) {
     if (!token) return true;
@@ -31,6 +32,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Keep the api client's token provider in sync with context state without
+    // a static import (avoids a circular dependency).
+    const accessTokenRef = useRef(accessToken);
+
+    // Keep the ref in sync with context state without reading it during render.
+    useEffect(() => {
+        accessTokenRef.current = accessToken;
+    }, [accessToken]);
+
     const logout = useCallback(() => {
         setCurrentUser(null);
         setAccessToken(null);
@@ -40,6 +50,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
         walletService.clearSession();
         window.location.href = "/";
     }, []);
+
+    // Keep the api client's token provider in sync with context state without
+    // a static import (avoids a circular dependency).
+    useEffect(() => {
+        setTokenProvider(() => accessTokenRef.current);
+        setUnauthorizedHandler(logout);
+        return () => {
+            setTokenProvider(null);
+            setUnauthorizedHandler(null);
+        };
+    }, [logout]);
 
     // Optional: Load user from localStorage or similar if needed
     useEffect(() => {

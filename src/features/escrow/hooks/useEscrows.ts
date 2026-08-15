@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useUser } from "../../user/presentation/context/UserContext";
+import { apiFetch } from "@/lib/api";
 
 export interface OpenEscrowParams {
     orderId: string;
@@ -32,96 +32,66 @@ export interface ReleaseEscrowParams {
     releaseSigner: string;
 }
 
+export interface EscrowTransactionResponse {
+    unsignedFundTransaction?: string;
+    unsignedTransaction?: string;
+}
+
+export interface EvidenceUploadResponse {
+    url: string;
+}
+
 export function useEscrows() {
-    const { accessToken, logout } = useUser();
-
-    const handleResponse = useCallback(async (res: Response, defaultMsg: string) => {
-        if (res.status === 401) {
-            logout();
-            throw new Error("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        }
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            const msg = errData.message ? (Array.isArray(errData.message) ? errData.message.join(', ') : errData.message) : defaultMsg;
-            throw new Error(msg);
-        }
-        return res.json();
-    }, [logout]);
-
     const openEscrow = useCallback(async (params: OpenEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/open`, {
+        return apiFetch<unknown>(`/escrows/open`, {
             method: "POST",
-            headers,
-            body: JSON.stringify(params),
+            body: params,
+            defaultError: "Error al abrir el contrato de escrow",
         });
-        return await handleResponse(res, "Error al abrir el contrato de escrow");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     const fundEscrow = useCallback(async (params: FundEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/fund`, {
+        return apiFetch<EscrowTransactionResponse>(`/escrows/fund`, {
             method: "POST",
-            headers,
-            body: JSON.stringify(params),
+            body: params,
+            defaultError: "Error al preparar la transacción de fondeo",
         });
-        return await handleResponse(res, "Error al preparar la transacción de fondeo");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     const syncEscrow = useCallback(async (params: SyncEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/sync`, {
+        return apiFetch<unknown>(`/escrows/sync`, {
             method: "POST",
-            headers,
-            body: JSON.stringify(params),
+            body: params,
+            defaultError: "Error al sincronizar la transacción en blockchain",
         });
-        return await handleResponse(res, "Error al sincronizar la transacción en blockchain");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     const markFiatSent = useCallback(async (escrowId: string, params: FiatSentParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/${escrowId}/fiat-sent`, {
+        return apiFetch<EscrowTransactionResponse>(`/escrows/${escrowId}/fiat-sent`, {
             method: "POST",
-            headers,
-            body: JSON.stringify(params),
+            body: params,
+            defaultError: "Error al confirmar el envío de pago",
         });
-        return await handleResponse(res, "Error al confirmar el envío de pago");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     const releaseEscrow = useCallback(async (params: ReleaseEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/release`, {
+        return apiFetch<EscrowTransactionResponse>(`/escrows/release`, {
             method: "POST",
-            headers,
-            body: JSON.stringify(params),
+            body: params,
+            defaultError: "Error al liberar los fondos del escrow",
         });
-        return await handleResponse(res, "Error al liberar los fondos del escrow");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     const uploadEvidence = useCallback(async (escrowId: string, file: File) => {
-        const headers: Record<string, string> = {};
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/${escrowId}/evidence`, {
+        return apiFetch<EvidenceUploadResponse>(`/escrows/${escrowId}/evidence`, {
             method: "POST",
-            headers,
             body: formData,
+            defaultError: "Error al subir el comprobante de pago",
         });
-        return await handleResponse(res, "Error al subir el comprobante de pago");
-    }, [accessToken, handleResponse]);
+    }, []);
 
     return { openEscrow, fundEscrow, syncEscrow, markFiatSent, releaseEscrow, uploadEvidence };
 }

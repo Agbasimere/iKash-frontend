@@ -1,40 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useOrders, ApiError } from "../useOrders";
-import * as UserContextModule from "../../../user/presentation/context/UserContext";
+import { ApiError } from "@/lib/api";
+import { useOrders } from "../useOrders";
+import * as api from "@/lib/api";
 
-vi.mock("../../../user/presentation/context/UserContext", () => ({
-    useUser: vi.fn(),
-}));
-
-const mockedUseUser = vi.mocked(UserContextModule.useUser);
-
-function mockFetchResponse(status: number, body: unknown) {
+vi.mock("@/lib/api", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@/lib/api")>();
     return {
-        ok: status >= 200 && status < 300,
-        status,
-        json: async () => body,
-    } as Response;
-}
+        ...actual,
+        apiFetch: vi.fn(),
+    };
+});
+
+const mockedApiFetch = vi.mocked(api.apiFetch);
 
 describe("useOrders", () => {
-    const logout = vi.fn();
-
     beforeEach(() => {
         vi.clearAllMocks();
-        mockedUseUser.mockReturnValue({
-            accessToken: "test-token",
-            logout,
-        } as unknown as ReturnType<typeof UserContextModule.useUser>);
-        vi.stubGlobal("fetch", vi.fn());
     });
 
     describe("cancelOrder", () => {
-        it("calls POST /orders/:id/cancel with the auth header and returns the updated order", async () => {
+        it("calls apiFetch with the cancel endpoint and returns the updated order", async () => {
             const updatedOrder = { orderId: "order-1", orderStatus: "cancelled" };
-            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-                mockFetchResponse(200, updatedOrder),
-            );
+            mockedApiFetch.mockResolvedValueOnce(updatedOrder);
 
             const { result } = renderHook(() => useOrders());
 
@@ -43,13 +31,10 @@ describe("useOrders", () => {
                 response = await result.current.cancelOrder("order-1");
             });
 
-            expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/orders/order-1/cancel"),
+            expect(mockedApiFetch).toHaveBeenCalledWith(
+                "/orders/order-1/cancel",
                 expect.objectContaining({
                     method: "POST",
-                    headers: expect.objectContaining({
-                        Authorization: "Bearer test-token",
-                    }),
                 }),
             );
             expect(response).toEqual(updatedOrder);
@@ -57,12 +42,8 @@ describe("useOrders", () => {
         });
 
         it("throws an ApiError carrying the HTTP status and backend error code on 409", async () => {
-            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-                mockFetchResponse(409, {
-                    statusCode: 409,
-                    error: "ORDER_CANCELLATION_NOT_ALLOWED",
-                    message: 'Order order-1 cannot be cancelled because it is already "released"',
-                }),
+            mockedApiFetch.mockRejectedValueOnce(
+                new ApiError("cannot cancel", 409, "ORDER_CANCELLATION_NOT_ALLOWED"),
             );
 
             const { result } = renderHook(() => useOrders());
@@ -82,12 +63,8 @@ describe("useOrders", () => {
         });
 
         it("throws an ApiError with status 403 when the user is not a participant", async () => {
-            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-                mockFetchResponse(403, {
-                    statusCode: 403,
-                    error: "UNAUTHORIZED_ACTION",
-                    message: "Only the buyer or seller on this order can cancel it",
-                }),
+            mockedApiFetch.mockRejectedValueOnce(
+                new ApiError("not a participant", 403, "UNAUTHORIZED_ACTION"),
             );
 
             const { result } = renderHook(() => useOrders());
@@ -106,37 +83,14 @@ describe("useOrders", () => {
             expect((caught as ApiError).code).toBe("UNAUTHORIZED_ACTION");
         });
 
-        it("logs the user out and throws on a 401", async () => {
-            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-                mockFetchResponse(401, {}),
-            );
+        it("propagates the 401 ApiError thrown by the api client", async () => {
+            mockedApiFetch.mockRejectedValueOnce(new ApiError("Sesión expirada.", 401));
 
             const { result } = renderHook(() => useOrders());
 
             await act(async () => {
                 await expect(result.current.cancelOrder("order-1")).rejects.toThrow();
             });
-
-            expect(logout).toHaveBeenCalledTimes(1);
-        });
-
-        it("omits the Authorization header when there is no access token", async () => {
-            mockedUseUser.mockReturnValue({
-                accessToken: null,
-                logout,
-            } as unknown as ReturnType<typeof UserContextModule.useUser>);
-            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-                mockFetchResponse(200, { orderId: "order-1", orderStatus: "cancelled" }),
-            );
-
-            const { result } = renderHook(() => useOrders());
-
-            await act(async () => {
-                await result.current.cancelOrder("order-1");
-            });
-
-            const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-            expect((options.headers as Record<string, string>).Authorization).toBeUndefined();
         });
     });
 });

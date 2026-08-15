@@ -5,19 +5,16 @@ import { Users } from "../models/users";
 import { CreateUser } from "../models/createUser";
 import { SetupAccountPayload } from "../models/setupAccount";
 import { useUser } from "../presentation/context/UserContext";
+import { apiFetch } from "@/lib/api";
 
 export function useUsers() {
     const [users, setUsers] = useState<Users[]>([]);
     const [user, setUser] = useState<Users | null>(null);
     const [userFound, setUserFound] = useState<Record<string, Users>>({})
-    const { accessToken, setAccessToken, setCurrentUser } = useUser();
+    const { setAccessToken, setCurrentUser } = useUser();
 
     useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`)
-            .then((res) => {
-                if (!res.ok) throw new Error('Not found users');
-                return res.json();
-            })
+        apiFetch<Users[]>("/users", { authenticated: false })
             .then((data) => {
                 setUsers(data);
             })
@@ -26,9 +23,7 @@ export function useUsers() {
 
     const getUser = useCallback(async (userId: string) => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`)
-            if (!res.ok) throw new Error('User not found');
-            const data = await res.json();
+            const data = await apiFetch<Users>(`/users/${userId}`, { authenticated: false });
             setUserFound(prev => ({ ...prev, [userId]: data }));
         } catch (error) {
             console.error(error)
@@ -37,15 +32,11 @@ export function useUsers() {
 
     const createUser = async (user: CreateUser) => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+            const data = await apiFetch<Users>("/users", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(user),
-            })
-            if (!res.ok) throw new Error('Create user error');
-            const data = await res.json();
+                body: user,
+                authenticated: false,
+            });
             setUser(data);
         } catch (error) {
             console.error('Error creating user:', error);
@@ -54,16 +45,10 @@ export function useUsers() {
 
     const updateUser = async (userId: string, userData: Partial<Users>): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+            const data = await apiFetch<Users>(`/users/${userId}`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(accessToken ? { "Authorization": `Bearer ${accessToken}` } : {}),
-                },
-                body: JSON.stringify(userData),
-            })
-            if (!res.ok) throw new Error('Update user error');
-            const data = await res.json();
+                body: userData,
+            });
             setUser(data);
             setCurrentUser(data);
             return data;
@@ -78,20 +63,10 @@ export function useUsers() {
             const formData = new FormData();
             formData.append("profileImage", file);
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/profile-picture`, {
+            const data = await apiFetch<Users>(`/users/${userId}/profile-picture`, {
                 method: "PATCH",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                },
                 body: formData,
             });
-
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(errorText || "Upload profile picture error");
-            }
-
-            const data = await res.json();
             setUser(data);
             setCurrentUser(data);
             return data;
@@ -103,9 +78,7 @@ export function useUsers() {
 
     const getOrCreateByWallet = async (publicKey: string): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/account?publicKey=${publicKey}`)
-            if (!res.ok) throw new Error('Get/Create account error');
-            const data = await res.json();
+            const data = await apiFetch<Users>(`/users/account?publicKey=${publicKey}`, { authenticated: false });
             setUser(data);
             return data;
         } catch (error) {
@@ -116,11 +89,7 @@ export function useUsers() {
 
     const checkAliasAvailable = async (alias: string): Promise<{ available: boolean }> => {
         try {
-            const headers: Record<string, string> = {};
-            if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/validate-alias?alias=${alias}`, { headers })
-            if (!res.ok) throw new Error('Check alias error');
-            return await res.json();
+            return await apiFetch<{ available: boolean }>(`/users/validate-alias?alias=${alias}`);
         } catch (error) {
             console.error('Error in checkAliasAvailable:', error);
             return { available: false };
@@ -129,21 +98,15 @@ export function useUsers() {
 
     const setupAccount = async (userId: string, payload: SetupAccountPayload): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/setup`, {
+            const data = await apiFetch<{ user: Users; access_token: string }>(`/users/${userId}/setup`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-                body: JSON.stringify(payload),
-            })
-            if (!res.ok) throw new Error('Setup account error');
-            const data = await res.json(); // Data is { user, access_token }
-            
+                body: payload,
+            });
+
             // Update context with final user and token
             setCurrentUser(data.user);
             setAccessToken(data.access_token);
-            
+
             return data.user;
         } catch (error) {
             console.error('Error in setupAccount:', error);
