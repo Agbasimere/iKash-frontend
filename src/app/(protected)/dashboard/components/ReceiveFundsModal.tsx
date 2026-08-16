@@ -3,12 +3,15 @@ import { useWallet } from "@/features/wallet";
 import { useUser } from "@/features/user/presentation/context/UserContext";
 import { QRCodeSVG } from "qrcode.react";
 import { useState, useMemo } from "react";
+import { useFocusTrap } from "@/app/hooks/useFocusTrap";
 
 export function ReceiveFundsModal({ onClose }: CloseModalProps) {
     const { publicKey } = useWallet();
     const { currentUser } = useUser();
     
     const [copiedType, setCopiedType] = useState("");
+
+    const panelRef = useFocusTrap<HTMLDivElement>({ onClose });
 
     const qrUrl = useMemo(() => {
         if (typeof window !== "undefined" && publicKey) {
@@ -39,13 +42,18 @@ export function ReceiveFundsModal({ onClose }: CloseModalProps) {
                 onClick={() => onClose()}
             >
                 <div
+                    ref={panelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="receive-funds-title"
+                    tabIndex={-1}
                     className="bg-[#0D1117F2] h-full w-md p-8 border-r border-white/10 flex flex-col justify-between"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div>
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex flex-col">
-                                <h2 className="text-white text-[30px] font-bold uppercase">Receive funds</h2>
+                                <h2 id="receive-funds-title" className="text-white text-[30px] font-bold uppercase">Receive funds</h2>
                                 <p className="text-[#C2C7D0] text-[14px]">Accept assets via Stellar Network.</p>
                             </div>
                             <button
@@ -83,13 +91,18 @@ export function ReceiveFundsModal({ onClose }: CloseModalProps) {
             onClick={() => onClose()}
         >
             <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="receive-funds-title"
+                tabIndex={-1}
                 className="bg-[#0D1117F2] h-full w-md p-8 border-r border-white/10 flex flex-col justify-between"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div>
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-col">
-                            <h2 className="text-white text-[30px] font-bold uppercase">Receive funds</h2>
+                            <h2 id="receive-funds-title" className="text-white text-[30px] font-bold uppercase">Receive funds</h2>
                             <p className="text-[#C2C7D0] text-[14px]">Accept assets via Stellar Network.</p>
                         </div>
                         <button
