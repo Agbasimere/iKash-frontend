@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "2.5.0",
@@ -23,6 +24,7 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "16.1.6",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
