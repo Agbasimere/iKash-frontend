@@ -149,13 +149,10 @@ export default function OrdersPage() {
   }, [combinedOrders, statusFilter, operationFilter]);
 
   const handleRowClick = (orderId: string) => {
-    // Only redirect if it is not a pure mockup UUID
-    if (orderId.startsWith("mock-")) {
-      // For demo, redirect to first real order or do a notification
-      router.push(`/p2p/orders/demo`);
-    } else {
-      router.push(`/p2p/orders/${orderId}`);
-    }
+    // All rows navigate to the real order flow. Mock ids (when present) fall
+    // through to the backend lookup and surface a not-found state instead of
+    // fabricated data — see IKSH-46 and IKSH-19.
+    router.push(`/p2p/orders/${orderId}`);
   };
 
   return (
