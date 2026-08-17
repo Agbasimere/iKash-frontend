@@ -10,6 +10,7 @@ export function useUsers() {
     const [users, setUsers] = useState<Users[]>([]);
     const [user, setUser] = useState<Users | null>(null);
     const [userFound, setUserFound] = useState<Record<string, Users>>({})
+    const [setupError, setSetupError] = useState<string | null>(null);
     const { accessToken, setAccessToken, setCurrentUser } = useUser();
 
     useEffect(() => {
@@ -128,6 +129,7 @@ export function useUsers() {
     }
 
     const setupAccount = async (userId: string, payload: SetupAccountPayload): Promise<Users | null> => {
+        setSetupError(null);
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/setup`, {
                 method: "POST",
@@ -137,7 +139,17 @@ export function useUsers() {
                 },
                 body: JSON.stringify(payload),
             })
-            if (!res.ok) throw new Error('Setup account error');
+            if (!res.ok) {
+                // Try to surface a backend-provided message (e.g. field validation
+                // errors) instead of a generic failure string.
+                const message = await res
+                    .json()
+                    .then((body) => body?.message)
+                    .catch(() => null);
+                throw new Error(
+                    Array.isArray(message) ? message.join(', ') : message || 'Setup account error'
+                );
+            }
             const data = await res.json(); // Data is { user, access_token }
             
             // Update context with final user and token
@@ -147,9 +159,12 @@ export function useUsers() {
             return data.user;
         } catch (error) {
             console.error('Error in setupAccount:', error);
+            setSetupError(error instanceof Error ? error.message : 'Setup account error');
             return null;
         }
     }
 
-    return { users, user, getUser, createUser, updateUser, uploadProfilePicture, userFound, getOrCreateByWallet, checkAliasAvailable, setupAccount };
+    const clearSetupError = () => setSetupError(null);
+
+    return { users, user, getUser, createUser, updateUser, uploadProfilePicture, userFound, getOrCreateByWallet, checkAliasAvailable, setupAccount, setupError, clearSetupError };
 }
