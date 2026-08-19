@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { NotificationProvider } from "./components/NotificationContext";
+import { NotificationProvider } from "@/features/notifications";
 import { UserProvider } from "../features/user/presentation/context/UserContext";
 import { WalletProvider } from "../features/wallet";
 import { Space_Grotesk } from "next/font/google";
