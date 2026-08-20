@@ -139,4 +139,97 @@ describe("useOrders", () => {
             expect((options.headers as Record<string, string>).Authorization).toBeUndefined();
         });
     });
+
+    describe("fetchUserOrders", () => {
+        beforeEach(() => {
+            vi.spyOn(console, "error").mockImplementation(() => {});
+        });
+
+        it("stores only the API orders for the requested user", async () => {
+            const apiOrders = [
+                { orderId: "order-1", buyerId: "user-1", orderStatus: "pending" },
+                { orderId: "order-2", sellerId: "user-1", orderStatus: "completed" },
+            ];
+            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+                mockFetchResponse(200, apiOrders),
+            );
+
+            const { result } = renderHook(() => useOrders());
+
+            await act(async () => {
+                await result.current.fetchUserOrders("user-1");
+            });
+
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/orders?userId=user-1"),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: "Bearer test-token",
+                    }),
+                }),
+            );
+            expect(result.current.orders).toEqual(apiOrders);
+            expect(result.current.isLoading).toBe(false);
+            expect(result.current.error).toBeNull();
+            expect(result.current.hasFetched).toBe(true);
+        });
+
+        it("stores an empty list when the API returns no orders", async () => {
+            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+                mockFetchResponse(200, []),
+            );
+
+            const { result } = renderHook(() => useOrders());
+
+            await act(async () => {
+                await result.current.fetchUserOrders("user-1");
+            });
+
+            expect(result.current.orders).toEqual([]);
+            expect(result.current.error).toBeNull();
+            expect(result.current.hasFetched).toBe(true);
+        });
+
+        it("exposes an error and clears orders when the request fails", async () => {
+            (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+                mockFetchResponse(500, { message: "Orders not found" }),
+            );
+
+            const { result } = renderHook(() => useOrders());
+
+            await act(async () => {
+                await result.current.fetchUserOrders("user-1");
+            });
+
+            expect(result.current.orders).toEqual([]);
+            expect(result.current.error).toBe("Orders not found");
+            expect(result.current.isLoading).toBe(false);
+            expect(result.current.hasFetched).toBe(true);
+        });
+
+        it("sets isLoading while the request is in flight", async () => {
+            let resolveFetch: (value: unknown) => void = () => {};
+            (fetch as ReturnType<typeof vi.fn>).mockImplementation(
+                () => new Promise((resolve) => {
+                    resolveFetch = resolve;
+                }),
+            );
+
+            const { result } = renderHook(() => useOrders());
+
+            let pending: Promise<void> | undefined;
+            act(() => {
+                pending = result.current.fetchUserOrders("user-1");
+            });
+
+            expect(result.current.isLoading).toBe(true);
+
+            await act(async () => {
+                resolveFetch(mockFetchResponse(200, []));
+                await pending;
+            });
+
+            expect(result.current.isLoading).toBe(false);
+        });
+    });
 });

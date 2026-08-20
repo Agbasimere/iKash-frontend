@@ -25,6 +25,9 @@ export class ApiError extends Error {
 export function useOrders() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [order, setOrder] = useState<Order | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasFetched, setHasFetched] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const { accessToken, logout } = useUser();
 
     const handleResponse = useCallback(async (res: Response, defaultError: string) => {
@@ -41,15 +44,22 @@ export function useOrders() {
     }, [logout]);
 
     const fetchUserOrders = useCallback(async (userId: string) => {
+        setIsLoading(true);
+        setError(null);
         try {
             const headers: Record<string, string> = { "Content-type": "application/json" };
             if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders?userId=${userId}`, { headers });
             const data = await handleResponse(res, 'Orders not found');
-            setOrders(data);
+            setOrders(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
+            setOrders([]);
+            setError(err instanceof Error ? err.message : "Orders not found");
+        } finally {
+            setHasFetched(true);
+            setIsLoading(false);
         }
     }, [accessToken, handleResponse]);
 
@@ -124,5 +134,5 @@ export function useOrders() {
         }
     };
 
-    return { orders, order, createOrder, getOrder, updateOrder, cancelOrder, fetchUserOrders };
+    return { orders, order, isLoading, hasFetched, error, createOrder, getOrder, updateOrder, cancelOrder, fetchUserOrders };
 }

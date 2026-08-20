@@ -10,151 +10,104 @@ import type { Order } from "@/features/order/models/order";
 import { useOrders } from "@/features/order/hooks/useOrders";
 import { ChevronRight, Calendar, ShoppingCart, TrendingUp } from "lucide-react";
 
-// Predefined mock data matching the exact ones in the images for high fidelity
-const MOCK_ORDERS = [
-  {
-    orderId: "mock-uuid-1",
-    isBuy: true,
-    assetAmount: "0.05",
-    assetCode: "USDC",
+function belongsToUser(order: Order, userId?: string) {
+  if (!userId) return false;
+  return order.buyerId === userId || order.sellerId === userId;
+}
+
+function formatOrderRow(order: Order, userId?: string) {
+  const isBuy = order.buyerId === userId;
+  const formattedDate = order.createdAt
+    ? new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
+    : "N/A";
+
+  const priceNum = parseFloat(order.offer?.price || "0") || 1;
+  const assetAmountNum = parseFloat(order.assetAmount) || 0;
+  const totalFiat = parseFloat(order.fiatAmount) || (assetAmountNum * priceNum);
+
+  return {
+    orderId: order.orderId,
+    isBuy,
+    assetAmount: assetAmountNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+    assetCode: order.offer?.assetCode || order.assetCode || "USDC",
     counterparty: {
-      alias: "CryptoKing_99",
-      kycStatus: "approved",
-      profileImageUrl: undefined,
+      alias: isBuy ? (order.seller?.alias || "Merchant") : (order.buyer?.alias || "Buyer"),
+      kycStatus: isBuy ? order.seller?.kycStatus : order.buyer?.kycStatus,
+      profileImageUrl: isBuy ? order.seller?.profileImageUrl : order.buyer?.profileImageUrl,
     },
-    dateStr: "OCT 24, 2026",
-    valueUsd: "3,250.00",
-    gasFee: "4.20",
-    status: "pending",
-  },
-  {
-    orderId: "mock-uuid-2",
-    isBuy: false,
-    assetAmount: "1,500",
-    assetCode: "XLM",
-    counterparty: {
-      alias: "StellarWhale",
-      kycStatus: "approved",
-      profileImageUrl: undefined,
-    },
-    dateStr: "OCT 21, 2026",
-    valueUsd: "210.45",
-    gasFee: "0.01",
-    status: "completed",
-  },
-  {
-    orderId: "mock-uuid-3",
-    isBuy: true,
-    assetAmount: "1.20",
-    assetCode: "XLM",
-    counterparty: {
-      alias: "OxDeFi_Master",
-      kycStatus: "approved",
-      profileImageUrl: undefined,
-    },
-    dateStr: "OCT 19, 2026",
-    valueUsd: "2,140.12",
-    gasFee: "12.50",
-    status: "cancelled",
-  },
-  {
-    orderId: "mock-uuid-4",
-    isBuy: false,
-    assetAmount: "5,000",
-    assetCode: "USDT",
-    counterparty: {
-      alias: "Nova_Trader",
-      kycStatus: "approved",
-      profileImageUrl: undefined,
-    },
-    dateStr: "OCT 15, 2026",
-    valueUsd: "5,000.00",
-    gasFee: "0.85",
-    status: "completed",
-  }
-];
+    dateStr: formattedDate,
+    valueUsd: totalFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    gasFee: isBuy ? "0.01" : "0.00",
+    status: order.orderStatus === "completed" || order.escrow?.escrowStatus === "released"
+      ? "completed"
+      : order.orderStatus === "cancelled"
+        ? "cancelled"
+        : "pending",
+  };
+}
+
+function OrdersSkeleton() {
+  return (
+    <div data-testid="orders-skeleton" aria-busy="true" aria-label="Loading orders" className="flex flex-col">
+      {[0, 1, 2, 3].map((row) => (
+        <div
+          key={row}
+          className="grid grid-cols-1 md:grid-cols-[1.5fr_1.2fr_1fr_1.2fr_1fr_40px] gap-4 p-6 border-b border-[rgba(22,22,24,0.05)] items-center animate-pulse"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-[#2a2a2a]" />
+            <div className="h-4 w-32 bg-[#2a2a2a] rounded" />
+          </div>
+          <div className="h-4 w-24 bg-[#2a2a2a] rounded" />
+          <div className="h-4 w-20 bg-[#2a2a2a] rounded" />
+          <div className="h-4 w-16 bg-[#2a2a2a] rounded ml-auto" />
+          <div className="h-6 w-20 bg-[#2a2a2a] rounded-full mx-auto" />
+          <div className="h-4 w-4 bg-[#2a2a2a] rounded ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function OrdersPage() {
   const router = useRouter();
   const { currentUser } = useUser();
-  const { orders: realOrders, fetchUserOrders } = useOrders();
+  const { orders: realOrders, fetchUserOrders, isLoading, hasFetched, error } = useOrders();
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [operationFilter, setOperationFilter] = useState("All");
 
-  // Fetch real user orders if logged in
   useEffect(() => {
     if (currentUser?.userId) {
       fetchUserOrders(currentUser.userId);
     }
   }, [currentUser?.userId, fetchUserOrders]);
 
-  // Combine real orders with mock orders to ensure high fidelity mockup matches image.png
-  const combinedOrders = useMemo(() => {
-    const formattedReal = (realOrders || []).map((o: Order) => {
-      const isBuy = o.buyerId === currentUser?.userId;
-      const formattedDate = o.createdAt 
-        ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
-        : "OCT 22, 2026";
-      
-      const priceNum = parseFloat(o.offer?.price || "0") || 1;
-      const assetAmountNum = parseFloat(o.assetAmount) || 0;
-      const totalFiat = parseFloat(o.fiatAmount) || (assetAmountNum * priceNum);
+  const formattedOrders = useMemo(() => {
+    return (realOrders || [])
+      .filter((order) => belongsToUser(order, currentUser?.userId))
+      .map((order) => formatOrderRow(order, currentUser?.userId));
+  }, [realOrders, currentUser?.userId]);
 
-      return {
-        orderId: o.orderId,
-        isBuy,
-        assetAmount: assetAmountNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
-        assetCode: o.offer?.assetCode || o.assetCode || "USDC",
-        counterparty: {
-          alias: isBuy ? (o.seller?.alias || "Merchant") : (o.buyer?.alias || "Buyer"),
-          kycStatus: isBuy ? o.seller?.kycStatus : o.buyer?.kycStatus,
-          profileImageUrl: isBuy ? o.seller?.profileImageUrl : o.buyer?.profileImageUrl,
-        },
-        dateStr: formattedDate,
-        valueUsd: totalFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        gasFee: isBuy ? "0.01" : "0.00",
-        status: o.orderStatus === "completed" || o.escrow?.escrowStatus === "released" 
-          ? "completed" 
-          : o.orderStatus === "cancelled" 
-          ? "cancelled" 
-          : "pending",
-      };
-    });
-
-    // Remove duplicates if IDs clash
-    const list = [...formattedReal];
-    MOCK_ORDERS.forEach(mock => {
-      if (!list.some(item => item.orderId === mock.orderId)) {
-        list.push(mock);
-      }
-    });
-
-    return list;
-  }, [realOrders, currentUser]);
-
-  // Apply filters
   const filteredOrders = useMemo(() => {
-    return combinedOrders.filter(o => {
-      // 1. Status Filter
+    return formattedOrders.filter((o) => {
       if (statusFilter !== "ALL" && o.status.toUpperCase() !== statusFilter) {
         return false;
       }
-      // 2. Operation Filter
       if (operationFilter !== "All") {
         if (operationFilter === "Buy" && !o.isBuy) return false;
         if (operationFilter === "Sell" && o.isBuy) return false;
       }
       return true;
     });
-  }, [combinedOrders, statusFilter, operationFilter]);
+  }, [formattedOrders, statusFilter, operationFilter]);
 
   const handleRowClick = (orderId: string) => {
-    // Only redirect if it is not a pure mockup UUID
-    if (orderId.startsWith("mock-")) {
-      // For demo, redirect to first real order or do a notification
-      router.push(`/p2p/orders/demo`);
-    } else {
-      router.push(`/p2p/orders/${orderId}`);
+    router.push(`/p2p/orders/${orderId}`);
+  };
+
+  const handleRetry = () => {
+    if (currentUser?.userId) {
+      fetchUserOrders(currentUser.userId);
     }
   };
 
@@ -252,15 +205,41 @@ export default function OrdersPage() {
 
             {/* Body de la Tabla */}
             <div className="flex flex-col">
-              {filteredOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-20 text-gray-500">
+              {isLoading || (!hasFetched && !error) ? (
+                <OrdersSkeleton />
+              ) : error ? (
+                <div
+                  data-testid="orders-error"
+                  role="alert"
+                  className="flex flex-col items-center justify-center p-20 text-gray-500"
+                >
                   <ShoppingCart className="w-12 h-12 mb-4 stroke-1" />
-                  <p className="font-bold">No orders match selected filters.</p>
+                  <p className="font-bold text-center">Could not load your orders.</p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="mt-4 bg-[#CEF100] text-black text-sm font-bold px-5 py-2 rounded-lg cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div
+                  data-testid="orders-empty"
+                  className="flex flex-col items-center justify-center p-20 text-gray-500"
+                >
+                  <ShoppingCart className="w-12 h-12 mb-4 stroke-1" />
+                  <p className="font-bold text-center">
+                    {formattedOrders.length === 0
+                      ? "You do not have any orders yet."
+                      : "No orders match selected filters."}
+                  </p>
                 </div>
               ) : (
                 filteredOrders.map((o) => (
                   <div
                     key={o.orderId}
+                    data-order-id={o.orderId}
                     onClick={() => handleRowClick(o.orderId)}
                     className="grid grid-cols-1 md:grid-cols-[1.5fr_1.2fr_1fr_1.2fr_1fr_40px] gap-4 p-6 border-b border-[rgba(22,22,24,0.05)] items-center hover:bg-[#1C1C1F] transition-colors cursor-pointer select-none"
                   >
