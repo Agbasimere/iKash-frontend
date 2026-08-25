@@ -1,30 +1,25 @@
 "use client";
 
-// TODO: Restore backend active-orders integration after the dashboard UI is approved.
-// import { useOrders } from "../hooks/useOrders";
-// import { useUser } from "@/features/user/presentation/context/UserContext";
-
-// TODO: Replace mockActiveOrders with backend active-order data
-// once the new dashboard design is validated.
-import { mockActiveOrders } from "../mocks/active-orders.mock";
+import { useEffect } from "react";
+import { useOrders } from "../hooks/useOrders";
+import { useUser } from "@/features/user/presentation/context/UserContext";
 import { ActiveOrderCard } from "./ActiveOrderCard";
 
 export function ActiveOrdersSection() {
-    // TODO: Restore backend active-orders integration after the dashboard UI is approved.
-    // const { currentUser } = useUser();
-    // const { orders, fetchUserOrders } = useOrders();
-    //
-    // useEffect(() => {
-    //     if (currentUser?.userId) {
-    //         fetchUserOrders(currentUser.userId);
-    //     }
-    // }, [currentUser?.userId, fetchUserOrders]);
-    //
-    // const activeOrders = orders.filter(
-    //     (o) => o.orderStatus !== "cancelled" && o.orderStatus !== "completed"
-    // );
+    const { currentUser } = useUser();
+    const { orders, fetchUserOrders } = useOrders();
 
-    const activeOrders = mockActiveOrders;
+    useEffect(() => {
+        if (currentUser?.userId) {
+            fetchUserOrders(currentUser.userId);
+        }
+    }, [currentUser?.userId, fetchUserOrders]);
+
+    // Only live orders belong in the "Active Orders" feed — cancelled and
+    // completed orders have their own views.
+    const activeOrders = orders.filter(
+        (o) => o.orderStatus !== "cancelled" && o.orderStatus !== "completed"
+    );
 
     if (activeOrders.length === 0) return null;
 
@@ -48,7 +43,11 @@ export function ActiveOrdersSection() {
                 style={{ scrollbarWidth: "none" }}
             >
                 {activeOrders.map((order) => (
-                    <ActiveOrderCard key={order.id} order={order} />
+                    <ActiveOrderCard
+                        key={order.orderId}
+                        order={order}
+                        currentUserId={currentUser?.userId}
+                    />
                 ))}
             </div>
         </section>
