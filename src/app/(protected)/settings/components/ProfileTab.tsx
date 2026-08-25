@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ShieldCheck, UserCheck, CheckCircle2, Clock3, Camera } from "lucide-react";
 import { useUser } from "@/features/user/presentation/context/UserContext";
 import { useUsers } from "@/features/user/hooks/useUsers";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 export function ProfileTab() {
     const { currentUser } = useUser();
     const { updateUser, uploadProfilePicture, checkAliasAvailable } = useUsers();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [username, setUsername] = useState("");

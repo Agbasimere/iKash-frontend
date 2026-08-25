@@ -15,7 +15,7 @@ import { mapWalletError } from "../../utils/wallet-errors";
 import { useRouter } from "next/navigation";
 import { useUsers } from "../../../user/hooks/useUsers";
 import { useUser } from "../../../user/presentation/context/UserContext";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 const Context = createContext<WalletContext | null>(null);
 
@@ -33,7 +33,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
     const { getOrCreateByWallet } = useUsers();
     const { setCurrentUser, setAccessToken, logout } = useUser();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
 
     // Use refs to avoid stale closures in useEffect without triggering re-runs
     const getOrCreateRef = useRef(getOrCreateByWallet);
