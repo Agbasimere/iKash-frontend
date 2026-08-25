@@ -4,6 +4,7 @@ import { NotificationProvider } from "@/features/notifications";
 import { UserProvider } from "../features/user/presentation/context/UserContext";
 import { WalletProvider } from "../features/wallet";
 import { Space_Grotesk } from "next/font/google";
+import { QueryProvider } from "./providers/QueryProvider";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -25,13 +26,15 @@ export default function RootLayout({
       <body
         className={spaceGrotesk.className}
       >
-        <NotificationProvider>
-          <UserProvider>
-            <WalletProvider>
-              {children}
-            </WalletProvider>
-          </UserProvider>
-        </NotificationProvider>
+        <QueryProvider>
+          <NotificationProvider>
+            <UserProvider>
+              <WalletProvider>
+                {children}
+              </WalletProvider>
+            </UserProvider>
+          </NotificationProvider>
+        </QueryProvider>
       </body>
     </html>
   );

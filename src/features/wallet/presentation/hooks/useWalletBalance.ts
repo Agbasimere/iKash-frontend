@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface AssetBalance {
   asset_type: string;
@@ -17,37 +19,22 @@ export interface BalanceState {
   error: string | null;
 }
 
-export function useWalletBalance(publicKey: string | null) {
-  const [state, setState] = useState<BalanceState>({
-    balance: null,
-    balances: [],
-    isLoading: true,
-    error: null,
+export function useWalletBalance(publicKey: string | null): BalanceState {
+  const { apiFetch } = useApi();
+
+  const { data, isLoading, error } = useQuery<AssetBalance[], Error>({
+    queryKey: queryKeys.wallet.balance(publicKey),
+    queryFn: () => apiFetch(`/stellar/balances/${publicKey}`),
+    enabled: !!publicKey,
   });
 
-  useEffect(() => {
-    if (!publicKey) return;
+  const xlm = data?.find((b) => b.asset_type === "native");
+  const balance = xlm ? parseFloat(xlm.balance).toFixed(7) : "0.00";
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-    fetch(`${apiUrl}/stellar/balances/${publicKey}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Account not found");
-        return res.json();
-      })
-      .then((data: AssetBalance[]) => {
-        const xlm = data.find((b) => b.asset_type === "native");
-        setState({
-          balance: xlm ? parseFloat(xlm.balance).toFixed(7) : "0.00",
-          balances: data,
-          isLoading: false,
-          error: null,
-        });
-      })
-      .catch((err) => {
-        setState({ balance: null, balances: [], isLoading: false, error: err.message });
-      });
-  }, [publicKey]);
-
-  return state;
+  return {
+    balance: data ? balance : null,
+    balances: data || [],
+    isLoading,
+    error: error?.message || null,
+  };
 }
