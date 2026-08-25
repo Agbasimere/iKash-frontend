@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Stats } from "../models/stats";
+import { apiFetch } from "@/lib/api";
 
 export type TimeWindow = "7d" | "2s" | "1m" | "all";
 
@@ -9,8 +10,7 @@ export function useStats() {
     const getStats = async (timeWindow?: string) => {
         try {
             const params = timeWindow && timeWindow !== "7d" ? `?window=${timeWindow}` : "";
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stats${params}`);
-            const data = await res.json();
+            const data = await apiFetch<Stats>(`/stats${params}`, { authenticated: false });
             setStats(data);
         } catch (error) {
             console.error("Error fetching stats:", error);
