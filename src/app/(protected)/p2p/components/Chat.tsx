@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, MoreVertical, SendHorizontal, Paperclip } from "lucide-react";
 import { useUser } from "@/features/user/presentation/context/UserContext";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { useChatSocket } from "@/features/chat/hooks/useChatSocket";
 import { Message } from "@/features/chat/models/message";
 import { ChatError } from "@/features/chat/types/chat-events.types";
@@ -44,7 +44,7 @@ const INITIAL_MOCK_MESSAGES = (orderId: string, currentUserId: string): Message[
 
 export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileImageUrl }: ChatProps) => {
     const { currentUser, accessToken } = useUser();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -84,11 +84,26 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         notify("error", error.message);
     }, [notify]);
 
+    const handleIncomingMessage = useCallback(
+        (message: Message) => {
+            mergeMessages(message);
+            if (currentUser && message.senderId !== currentUser.userId) {
+                notify({
+                    type: "info",
+                    title: "New message received",
+                    message: message.content,
+                    dedupeKey: `chat-message:${message.messageId}`,
+                });
+            }
+        },
+        [currentUser, mergeMessages, notify],
+    );
+
     const { status: connectionStatus, sendMessage } = useChatSocket({
         orderId,
         accessToken,
         enabled: Boolean(currentUser && accessToken && historyLoaded && !isDemo),
-        onMessage: mergeMessages,
+        onMessage: handleIncomingMessage,
         onError: handleSocketError,
     });
 

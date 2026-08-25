@@ -10,7 +10,7 @@ import { isSignatureCancelled } from "@/features/wallet/application/wallet.servi
 import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCancellation";
 import { useWalletBalance } from "@/features/wallet/presentation/hooks/useWalletBalance";
 import { useRouter } from "next/navigation";
-import { useNotification } from "../../../components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { PaymentMethodOption } from "@/features/paymentMethod/models/paymentMethod";
 import { SignatureCancelledModal } from "./SignatureCancelledModal";
 
@@ -31,7 +31,7 @@ export function ConfirmOrderModal({ offer, creator, onClose }: ConfirmOrderModal
     const { createOrder } = useOrders();
     const { syncEscrow } = useEscrows();
     const router = useRouter();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
 
     const [amountToPay, setAmountToPay] = useState("");
     const [selectedPaymentId, setSelectedPaymentId] = useState("");
