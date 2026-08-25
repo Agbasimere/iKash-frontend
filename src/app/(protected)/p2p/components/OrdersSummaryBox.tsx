@@ -40,24 +40,11 @@ export function OrdersSummaryBox() {
     };
   });
 
-  // Combine real and mock orders to always show 3 items
-  const displayOrders = [...formattedReal];
-  /*
-  if (displayOrders.length < 3) {
-    MOCK_ORDERS.forEach(mock => {
-      if (displayOrders.length < 3 && !displayOrders.some(o => o.orderId === mock.orderId)) {
-        displayOrders.push(mock);
-      }
-    });
-  }*/
-  const finalOrders = displayOrders.slice(0, 3);
+  // Only real orders are shown (no mock fallback) — see IKSH-46.
+  const finalOrders = formattedReal.slice(0, 3);
 
   const handleItemClick = (orderId: string) => {
-    if (orderId.startsWith("mock-")) {
-      router.push(`/p2p/orders/demo`);
-    } else {
-      router.push(`/p2p/orders/${orderId}`);
-    }
+    router.push(`/p2p/orders/${orderId}`);
   };
 
   return (
