@@ -78,12 +78,12 @@ export const transactionExportService = {
     /**
      * Executes the download process for CSV or PDF export.
      */
-    export(
+    async export(
         orders: Order[],
         currentUserId: string,
         format: "csv" | "pdf",
         filters?: ExportFilters
-    ): void {
+    ): Promise<void> {
         const records = this.mapOrdersToExportRecords(orders, currentUserId);
         
         // Generate filename prefix with current date: e.g. ikash-transactions-2026-07-14
@@ -93,7 +93,7 @@ export const transactionExportService = {
         if (format === "csv") {
             exportTransactionsCsv(records, filename);
         } else {
-            exportTransactionsPdf(records, filename, filters);
+            await exportTransactionsPdf(records, filename, filters);
         }
     }
 };

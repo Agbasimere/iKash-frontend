@@ -1,7 +1,8 @@
 import { CloseModalProps } from "@/app/utils/closeModalProps";
 import { useWallet } from "@/features/wallet";
 import { useUser } from "@/features/user/presentation/context/UserContext";
-import { QRCodeSVG } from "qrcode.react";
+import dynamic from "next/dynamic";
+const QRCodeSVG = dynamic(() => import("qrcode.react").then(mod => mod.QRCodeSVG), { ssr: false });
 import { useState, useMemo } from "react";
 import { useFocusTrap } from "@/app/hooks/useFocusTrap";
 
