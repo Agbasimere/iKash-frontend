@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useApi } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface PaymentProvider {
     provider_id: string;
@@ -17,26 +19,12 @@ export interface PaymentProvider {
 }
 
 export function usePaymentProviders() {
-    const [providers, setProviders] = useState<PaymentProvider[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { apiFetch } = useApi();
 
-    useEffect(() => {
-        const fetchProviders = async () => {
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment-providers`); // I need to create this endpoint too
-                if (!response.ok) throw new Error('Failed to fetch providers');
-                const data = await response.json();
-                setProviders(data);
-            } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : String(err));
-            } finally {
-                setLoading(false);
-            }
-        };
+    const { data: providers = [], isLoading: loading, error } = useQuery<PaymentProvider[], Error>({
+        queryKey: queryKeys.paymentMethods.providers,
+        queryFn: () => apiFetch('/payment-providers')
+    });
 
-        fetchProviders();
-    }, []);
-
-    return { providers, loading, error };
+    return { providers, loading, error: error?.message || null };
 }

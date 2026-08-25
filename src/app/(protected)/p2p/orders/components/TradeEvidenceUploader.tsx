@@ -6,7 +6,7 @@ import { isSignatureCancelled } from "@/features/wallet/application/wallet.servi
 import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCancellation";
 import { Info, Upload, FileUp, CircleCheck, Loader2, Search, Trash2 } from "lucide-react";
 import { SignatureCancelledModal } from "../../components/SignatureCancelledModal";
-import { useNotification } from "../../../../components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 export interface TradeEvidenceUploaderProps {
     orderId: string;
@@ -44,7 +44,7 @@ export function TradeEvidenceUploader({
     const [isDragging, setIsDragging] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const sig = useSignatureCancellation();
 
     // Sync with incoming evidenceUrl prop (e.g. on page refresh or peer update)
@@ -67,7 +67,7 @@ export function TradeEvidenceUploader({
             setUploadState('idle');
             setUploadedTime(null);
         }
-    }, [evidenceUrl, escrowStatus]);
+    }, [evidenceUrl, escrowStatus, uploadedTime]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {

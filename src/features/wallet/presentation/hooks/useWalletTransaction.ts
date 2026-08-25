@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface Transaction {
     id: string;
@@ -19,30 +21,19 @@ interface TransactionsState {
     error: string | null;
 }
 
-export function useWalletTransactions(publicKey: string | null) {
-    const [state, setState] = useState<TransactionsState>({
-        transactions: [],
-        isLoading: true,
-        error: null,
+export function useWalletTransactions(publicKey: string | null): TransactionsState {
+    const { apiFetch } = useApi();
+
+    const { data: transactions = [], isLoading, error } = useQuery<Transaction[], Error>({
+        queryKey: queryKeys.wallet.transactions(publicKey),
+        queryFn: () => apiFetch(`/stellar/transactions/${publicKey}`),
+        enabled: !!publicKey,
+        refetchInterval: 10000,
     });
 
-    useEffect(() => {
-        if (!publicKey) return;
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-        fetch(`${apiUrl}/stellar/transactions/${publicKey}`)
-            .then((res) => {
-                if (!res.ok) throw new Error("Transacciones no encontradas");
-                return res.json();
-            })
-            .then((data: Transaction[]) => {
-                setState({ transactions: data, isLoading: false, error: null });
-            })
-            .catch((err) => {
-                setState({ transactions: [], isLoading: false, error: err.message });
-            });
-    }, [publicKey]);
-
-    return state;
+    return {
+        transactions,
+        isLoading,
+        error: error?.message || null,
+    };
 }

@@ -805,7 +805,6 @@ export function ConnectWalletModal({
 
 // --- MAIN HOMEPAGE COMPONENT ---
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState("Home");
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
 
   const handleConnectWallet = () => {

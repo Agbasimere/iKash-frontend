@@ -7,7 +7,7 @@ import { isSignatureCancelled } from "@/features/wallet/application/wallet.servi
 import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCancellation";
 import { CircleCheck, Loader2, Eye, Search } from "lucide-react";
 import { SignatureCancelledModal } from "../../components/SignatureCancelledModal";
-import { useNotification } from "../../../../components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 export interface EvidencePreviewProps {
     orderId: string;
@@ -43,7 +43,7 @@ export function EvidencePreview({
     const [timeLeft, setTimeLeft] = useState<string>("00:00");
     const [isExpired, setIsExpired] = useState(false);
     const [pendingAction, setPendingAction] = useState<"fund" | "release" | null>(null);
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const sig = useSignatureCancellation();
 
     useEffect(() => {
