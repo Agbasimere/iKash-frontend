@@ -67,7 +67,7 @@ export function TradeEvidenceUploader({
             setUploadState('idle');
             setUploadedTime(null);
         }
-    }, [evidenceUrl, escrowStatus]);
+    }, [evidenceUrl, escrowStatus, uploadedTime]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {

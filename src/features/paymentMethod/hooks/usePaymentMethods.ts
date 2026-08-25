@@ -1,65 +1,65 @@
-import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PaymentMethod } from "../models/paymentMethod";
 import { CreatePaymentMethod } from "../models/createPaymentMethod";
 import { UpdatePaymentMethod } from "../models/updatePaymentMethod";
-import { apiFetch } from "@/lib/api";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function usePaymentMethods() {
-    const [methods, setMethods] = useState<PaymentMethod[]>([]);
-    const [method, setMethod] = useState<PaymentMethod | null>(null);
+    const { apiFetch } = useApi();
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        apiFetch<PaymentMethod[]>("/payment-methods", { authenticated: false })
-            .then(data => {
-                setMethods(data);
-            })
-            .catch(err => console.error("Failed to load payment methods:", err));
-    }, []);
+    const { data: methods = [], isLoading } = useQuery<PaymentMethod[]>({
+        queryKey: queryKeys.paymentMethods.all,
+        queryFn: () => apiFetch('/payment-methods')
+    });
 
     const getPaymentMethod = async (methodId: string) => {
-        try {
-            const data = await apiFetch<PaymentMethod>(`/payment-methods/${methodId}`);
-            setMethod(data);
-        } catch (error) {
-            console.error(error);
-        }
-    }
+        return await queryClient.fetchQuery({
+            queryKey: queryKeys.paymentMethods.detail(methodId),
+            queryFn: () => apiFetch(`/payment-methods/${methodId}`)
+        });
+    };
 
-    const createPaymentMethod = async (paymentMethod: CreatePaymentMethod) => {
-        try {
-            const data = await apiFetch<PaymentMethod>("/payment-methods", {
-                method: "POST",
-                body: paymentMethod,
-                authenticated: false,
-            });
-            setMethod(data);
-        } catch (error) {
-            console.error(error);
+    const { mutateAsync: createPaymentMethod } = useMutation({
+        mutationFn: (paymentMethod: CreatePaymentMethod) => apiFetch('/payment-methods', {
+            method: "POST",
+            body: JSON.stringify(paymentMethod)
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods.all });
         }
-    }
+    });
 
-    const updateMethod = async (methodId: string, update: UpdatePaymentMethod) => {
-        try {
-            const data = await apiFetch<PaymentMethod>(`/payment-methods/${methodId}`, {
-                method: "PATCH",
-                body: update,
-            });
-            setMethod(data);
-        } catch (err) {
-            console.error(err);
+    const { mutateAsync: updateMethod } = useMutation({
+        mutationFn: ({ methodId, update }: { methodId: string, update: UpdatePaymentMethod }) => apiFetch(`/payment-methods/${methodId}`, {
+            method: "PATCH",
+            body: JSON.stringify(update)
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods.all });
         }
-    }
+    });
 
-    const deleteMethod = async (methodId: string) => {
-        try {
-            const data = await apiFetch<PaymentMethod>(`/payment-methods/${methodId}`, {
-                method: "DELETE",
-            });
-            setMethod(data);
-        } catch (error) {
-            console.error(error);
+    const { mutateAsync: deleteMethod } = useMutation({
+        mutationFn: (methodId: string) => apiFetch(`/payment-methods/${methodId}`, {
+            method: "DELETE"
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.paymentMethods.all });
         }
-    }
+    });
 
-    return { methods, method, getPaymentMethod, createPaymentMethod, updateMethod, deleteMethod }
+    const wrappedUpdateMethod = (methodId: string, update: UpdatePaymentMethod) => updateMethod({ methodId, update });
+    const wrappedDeleteMethod = (methodId: string) => deleteMethod(methodId);
+
+    return { 
+        methods, 
+        method: null, 
+        getPaymentMethod, 
+        createPaymentMethod, 
+        updateMethod: wrappedUpdateMethod, 
+        deleteMethod: wrappedDeleteMethod,
+        isLoading
+    };
 }

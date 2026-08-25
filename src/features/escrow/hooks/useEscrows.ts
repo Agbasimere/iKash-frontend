@@ -1,5 +1,6 @@
-import { useCallback } from "react";
-import { apiFetch } from "@/lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface OpenEscrowParams {
     orderId: string;
@@ -32,66 +33,83 @@ export interface ReleaseEscrowParams {
     releaseSigner: string;
 }
 
-export interface EscrowTransactionResponse {
-    unsignedFundTransaction?: string;
-    unsignedTransaction?: string;
-}
-
-export interface EvidenceUploadResponse {
-    url: string;
-}
-
 export function useEscrows() {
-    const openEscrow = useCallback(async (params: OpenEscrowParams) => {
-        return apiFetch<unknown>(`/escrows/open`, {
+    const { apiFetch } = useApi();
+    const queryClient = useQueryClient();
+
+    const { mutateAsync: openEscrow } = useMutation({
+        mutationFn: (params: OpenEscrowParams) => apiFetch('/escrows/open', {
             method: "POST",
-            body: params,
-            defaultError: "Error al abrir el contrato de escrow",
-        });
-    }, []);
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const fundEscrow = useCallback(async (params: FundEscrowParams) => {
-        return apiFetch<EscrowTransactionResponse>(`/escrows/fund`, {
+    const { mutateAsync: fundEscrow } = useMutation({
+        mutationFn: (params: FundEscrowParams) => apiFetch('/escrows/fund', {
             method: "POST",
-            body: params,
-            defaultError: "Error al preparar la transacción de fondeo",
-        });
-    }, []);
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const syncEscrow = useCallback(async (params: SyncEscrowParams) => {
-        return apiFetch<unknown>(`/escrows/sync`, {
+    const { mutateAsync: syncEscrow } = useMutation({
+        mutationFn: (params: SyncEscrowParams) => apiFetch('/escrows/sync', {
             method: "POST",
-            body: params,
-            defaultError: "Error al sincronizar la transacción en blockchain",
-        });
-    }, []);
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const markFiatSent = useCallback(async (escrowId: string, params: FiatSentParams) => {
-        return apiFetch<EscrowTransactionResponse>(`/escrows/${escrowId}/fiat-sent`, {
+    const { mutateAsync: markFiatSent } = useMutation({
+        mutationFn: ({ escrowId, params }: { escrowId: string, params: FiatSentParams }) => apiFetch(`/escrows/${escrowId}/fiat-sent`, {
             method: "POST",
-            body: params,
-            defaultError: "Error al confirmar el envío de pago",
-        });
-    }, []);
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const releaseEscrow = useCallback(async (params: ReleaseEscrowParams) => {
-        return apiFetch<EscrowTransactionResponse>(`/escrows/release`, {
+    const { mutateAsync: releaseEscrow } = useMutation({
+        mutationFn: (params: ReleaseEscrowParams) => apiFetch('/escrows/release', {
             method: "POST",
-            body: params,
-            defaultError: "Error al liberar los fondos del escrow",
-        });
-    }, []);
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const uploadEvidence = useCallback(async (escrowId: string, file: File) => {
-        const formData = new FormData();
-        formData.append("file", file);
+    const { mutateAsync: uploadEvidenceMutation } = useMutation({
+        mutationFn: ({ escrowId, file }: { escrowId: string, file: File }) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            return apiFetch(`/escrows/${escrowId}/evidence`, {
+                method: "POST",
+                body: formData,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-        return apiFetch<EvidenceUploadResponse>(`/escrows/${escrowId}/evidence`, {
-            method: "POST",
-            body: formData,
-            defaultError: "Error al subir el comprobante de pago",
-        });
-    }, []);
+    const wrappedMarkFiatSent = (escrowId: string, params: FiatSentParams) => markFiatSent({ escrowId, params });
+    const wrappedUploadEvidence = (escrowId: string, file: File) => uploadEvidenceMutation({ escrowId, file });
 
-    return { openEscrow, fundEscrow, syncEscrow, markFiatSent, releaseEscrow, uploadEvidence };
+    return { 
+        openEscrow, 
+        fundEscrow, 
+        syncEscrow, 
+        markFiatSent: wrappedMarkFiatSent, 
+        releaseEscrow, 
+        uploadEvidence: wrappedUploadEvidence 
+    };
 }

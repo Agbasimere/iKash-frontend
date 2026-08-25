@@ -1,101 +1,90 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Offer } from "../models/offer";
 import { CreateOffer } from "../models/createOffer";
 import { UpdateOffer } from "../models/updateOffer";
-import { apiFetch } from "@/lib/api";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useOffers(filters?: Record<string, string>) {
-    const [offers, setOffers] = useState<Offer[]>([]);
-    const [offer, setOffer] = useState<Offer | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const { apiFetch } = useApi();
+    const queryClient = useQueryClient();
 
-    // Tracks the AbortController for the most recent in-flight fetch so that
-    // stale responses from earlier requests cannot overwrite newer results.
-    const abortRef = useRef<AbortController | null>(null);
+    const [manualFilters, setManualFilters] = useState<Record<string, string> | null>(null);
+    const activeFilters = manualFilters ?? filters;
 
-    const fetchOffers = useCallback(async (currentFilters?: Record<string, string>) => {
-        // Cancel any previous in-flight request
-        if (abortRef.current) {
-            abortRef.current.abort();
-        }
-        const controller = new AbortController();
-        abortRef.current = controller;
-
-        setIsLoading(true);
-        try {
-            let url = "/offers";
-            if (currentFilters) {
-                const params = new URLSearchParams(currentFilters);
+    const { data: offers = [], isLoading } = useQuery<Offer[]>({
+        queryKey: queryKeys.offers.list(activeFilters),
+        queryFn: ({ signal }) => {
+            let endpoint = '/offers';
+            if (activeFilters) {
+                const params = new URLSearchParams(activeFilters);
                 const queryString = params.toString();
                 if (queryString) {
-                    url += `?${queryString}`;
+                    endpoint += `?${queryString}`;
                 }
             }
-            const data = await apiFetch<Offer[]>(url, { signal: controller.signal, authenticated: false });
-            setOffers(data);
-        } catch (err: unknown) {
-            // Ignore intentional aborts (stale request cancelled by newer one)
-            if (err instanceof Error && err.name === "AbortError") return;
-            console.error(err);
-        } finally {
-            // Only clear loading if this controller is still the active one
-            if (abortRef.current === controller) {
-                setIsLoading(false);
-            }
-        }
-    }, []);
+            return apiFetch(endpoint, { signal });
+        },
+    });
 
-    useEffect(() => {
-        fetchOffers(filters);
-    }, [filters, fetchOffers]);
+    const fetchOffers = useCallback(async (currentFilters?: Record<string, string>) => {
+        if (currentFilters) {
+            setManualFilters(currentFilters);
+        } else {
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.list(activeFilters) });
+        }
+    }, [queryClient, activeFilters]);
 
     const getOffer = async (offerId: string) => {
-        try {
-            const data = await apiFetch<Offer>(`/offers/${offerId}`, { authenticated: false });
-            setOffer(data);
-        } catch (error) {
-            console.error(error)
-        }
-    }
+        return await queryClient.fetchQuery({
+            queryKey: queryKeys.offers.detail(offerId),
+            queryFn: () => apiFetch(`/offers/${offerId}`)
+        });
+    };
 
-    const createOffer = async (newOffer: CreateOffer) => {
-        try {
-            return await apiFetch<Offer>("/offers", {
-                method: "POST",
-                body: newOffer,
-                defaultError: "Create offer error",
-            });
-        } catch (error) {
-            console.error('Error', error);
-            throw error;
+    const { mutateAsync: createOffer } = useMutation({
+        mutationFn: (newOffer: CreateOffer) => apiFetch('/offers', {
+            method: "POST",
+            body: JSON.stringify(newOffer)
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.all });
         }
-    }
+    });
 
-    const updateOffer = async (offerId: string, updateOffer: UpdateOffer) => {
-        try {
-            const data = await apiFetch<Offer>(`/offers/${offerId}`, {
-                method: "PATCH",
-                body: updateOffer,
-                defaultError: "Update offer error",
-            });
-            setOffer(data);
-        } catch (error) {
-            console.error('Error updating offer:', error);
-            throw error;
+    const { mutateAsync: updateOffer } = useMutation({
+        mutationFn: ({ offerId, update }: { offerId: string, update: UpdateOffer }) => apiFetch(`/offers/${offerId}`, {
+            method: "PATCH",
+            body: JSON.stringify(update)
+        }),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.detail(variables.offerId) });
         }
-    }
+    });
 
-    const deleteOffer = async (offerId: string) => {
-        try {
-            const data = await apiFetch<Offer>(`/offers/${offerId}`, {
-                method: "DELETE",
-            });
-            setOffer(data);
-        } catch (error) {
-            console.error(error);
-            throw error;
+    const { mutateAsync: deleteOffer } = useMutation({
+        mutationFn: (offerId: string) => apiFetch(`/offers/${offerId}`, {
+            method: "DELETE"
+        }),
+        onSuccess: (_, offerId) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.offers.detail(offerId) });
         }
-    }
+    });
 
-    return { offers, offer, fetchOffers, getOffer, createOffer, updateOffer, deleteOffer, isLoading };
+    const wrappedUpdateOffer = (offerId: string, update: UpdateOffer) => updateOffer({ offerId, update });
+    const wrappedDeleteOffer = (offerId: string) => deleteOffer(offerId);
+
+    return { 
+        offers, 
+        offer: null, 
+        fetchOffers, 
+        getOffer, 
+        createOffer, 
+        updateOffer: wrappedUpdateOffer, 
+        deleteOffer: wrappedDeleteOffer, 
+        isLoading 
+    };
 }

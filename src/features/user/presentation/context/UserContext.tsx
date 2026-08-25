@@ -10,7 +10,7 @@ function isTokenExpired(token: string | null) {
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         return payload.exp * 1000 < Date.now();
-    } catch (e) {
+    } catch {
         return true;
     }
 }

@@ -6,10 +6,11 @@ import { useStats } from "@/features/stats/hooks/useStats";
 import type { TimeWindow } from "@/features/stats/hooks/useStats";
 import { MetricCard } from "./components/MetricCard";
 import { ShieldCheck, TrendingUp, UserPlus, Wallet } from "lucide-react";
-import { WaitlistGrowth } from "./components/WaitlistGrowth";
+import dynamic from "next/dynamic";
+const WaitlistGrowth = dynamic(() => import("./components/WaitlistGrowth").then(mod => mod.WaitlistGrowth), { ssr: false });
 
 export default function StatsPage() {
-    const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+    const [, setIsConnectModalOpen] = useState(false);
     const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
     const { stats, getStats } = useStats();
 
@@ -24,7 +25,7 @@ export default function StatsPage() {
 
     useEffect(() => {
         getStats("7d");
-    }, []);
+    }, [getStats]);
 
     const escrowsCompleted = stats?.escrows_completed || 0;
     const escrowsCreated = stats?.escrow_created || 0;
