@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Suspense } from "react";
-import { CreateOfferModal } from "./CreateOfferModal";
-import { ConfirmOrderModal } from "./ConfirmOrderModal";
+import dynamic from "next/dynamic";
+const CreateOfferModal = dynamic(() => import("./CreateOfferModal").then((mod) => mod.CreateOfferModal), { ssr: false });
+const ConfirmOrderModal = dynamic(() => import("./ConfirmOrderModal").then((mod) => mod.ConfirmOrderModal), { ssr: false });
 import { useOffers } from "@/features/offer/hooks/useOffers";
 import { useOfferFilters } from "@/features/offer/hooks/useOfferFilters";
 import { useUsers } from "@/features/user/hooks/useUsers";
