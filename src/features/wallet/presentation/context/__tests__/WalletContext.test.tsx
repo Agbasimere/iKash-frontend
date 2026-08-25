@@ -33,8 +33,8 @@ vi.mock("../../../../user/presentation/context/UserContext", () => ({
     }),
 }));
 
-vi.mock("@/app/components/NotificationContext", () => ({
-    useNotification: () => ({ notify: mockNotify }),
+vi.mock("@/features/notifications", () => ({
+    useNotifications: () => ({ notify: mockNotify, dismiss: vi.fn(), dismissAll: vi.fn() }),
 }));
 
 vi.mock("next/navigation", () => ({
