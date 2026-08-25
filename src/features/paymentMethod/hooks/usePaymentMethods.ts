@@ -16,7 +16,7 @@ export function usePaymentMethods() {
 
     const getPaymentMethod = async (methodId: string) => {
         return await queryClient.fetchQuery({
-            queryKey: ['paymentMethods', methodId],
+            queryKey: queryKeys.paymentMethods.detail(methodId),
             queryFn: () => apiFetch(`/payment-methods/${methodId}`)
         });
     };

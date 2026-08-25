@@ -39,7 +39,7 @@ export function useApi() {
 
         if (res.status === 401) {
             logout();
-            throw new Error("Sesión expirada. Por favor, inicia sesión nuevamente.");
+            throw new ApiError("Sesión expirada. Por favor, inicia sesión nuevamente.", 401);
         }
 
         if (!res.ok) {
