@@ -14,7 +14,7 @@ import { canCancelOrder } from "@/features/order/utils/canCancelOrder";
 import { createDemoOrder } from "@/features/order/mocks/demo-order";
 import { DEMO_MODE } from "@/config/demo-mode";
 import { CancelOrderModal } from "../components/CancelOrderModal";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { ArrowLeft, AlertTriangle, Ban, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,7 +31,7 @@ export default function TradePage({ params }: PageProps) {
     const { orderId } = use(params);
     const { currentUser } = useUser();
     const { getOrder, cancelOrder } = useOrders();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
 
     const [order, setOrder] = useState<Order | null>(null);
     const [isLoading, setIsLoading] = useState(true);
