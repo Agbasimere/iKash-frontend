@@ -12,7 +12,7 @@ import type { Order } from "@/features/order/models/order";
 import { useOrders, ApiError } from "@/features/order/hooks/useOrders";
 import { canCancelOrder } from "@/features/order/utils/canCancelOrder";
 import { CancelOrderModal } from "../components/CancelOrderModal";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { ArrowLeft, AlertTriangle, Ban, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,7 +29,7 @@ export default function TradePage({ params }: PageProps) {
     const { orderId } = use(params);
     const { currentUser } = useUser();
     const { getOrder, cancelOrder } = useOrders();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
 
     const [order, setOrder] = useState<Order | null>(null);
     const [isLoading, setIsLoading] = useState(true);
