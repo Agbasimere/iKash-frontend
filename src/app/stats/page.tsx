@@ -6,7 +6,8 @@ import { useStats } from "@/features/stats/hooks/useStats";
 import type { TimeWindow } from "@/features/stats/hooks/useStats";
 import { MetricCard } from "./components/MetricCard";
 import { ShieldCheck, TrendingUp, UserPlus, Wallet } from "lucide-react";
-import { WaitlistGrowth } from "./components/WaitlistGrowth";
+import dynamic from "next/dynamic";
+const WaitlistGrowth = dynamic(() => import("./components/WaitlistGrowth").then(mod => mod.WaitlistGrowth), { ssr: false });
 
 export default function StatsPage() {
     const [, setIsConnectModalOpen] = useState(false);
