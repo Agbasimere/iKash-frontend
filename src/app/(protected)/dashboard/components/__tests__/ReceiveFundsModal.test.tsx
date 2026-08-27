@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { useState, useEffect, createElement, type ComponentType } from "react";
 import { ReceiveFundsModal } from "../ReceiveFundsModal";
 
 const walletMock = vi.hoisted(() => ({
@@ -19,19 +20,19 @@ vi.mock("qrcode.react", () => ({
 }));
 
 vi.mock("next/dynamic", () => {
-    const React = require("react");
     return {
         __esModule: true,
-        default: (importFn: () => Promise<any>) => {
-            const DynamicComponent = (props: any) => {
-                const [Component, setComponent] = React.useState<any>(null);
-                React.useEffect(() => {
+        default: (            importFn: () => Promise<{ default: ComponentType }> ,
+        ) => {
+            const DynamicComponent = (props: Record<string, unknown>) => {
+                const [Component, setComponent] = useState<ComponentType | null>(null);
+                useEffect(() => {
                     importFn().then((mod) => {
                         setComponent(() => mod?.default ?? mod);
                     });
                 }, []);
                 if (!Component) return null;
-                return React.createElement(Component, props);
+                return createElement(Component, props);
             };
             return DynamicComponent;
         },
