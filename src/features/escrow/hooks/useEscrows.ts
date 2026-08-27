@@ -33,11 +33,16 @@ export interface ReleaseEscrowParams {
     releaseSigner: string;
 }
 
+export interface EscrowSigningResponse {
+    unsignedFundTransaction?: string;
+    unsignedTransaction?: string;
+}
+
 export function useEscrows() {
     const queryClient = useQueryClient();
 
     const { mutateAsync: openEscrow } = useMutation({
-        mutationFn: (params: OpenEscrowParams) => apiFetch('/escrows/open', {
+        mutationFn: (params: OpenEscrowParams) => apiFetch<EscrowSigningResponse>('/escrows/open', {
             method: "POST",
             body: params,
         }),
@@ -47,7 +52,7 @@ export function useEscrows() {
     });
 
     const { mutateAsync: fundEscrow } = useMutation({
-        mutationFn: (params: FundEscrowParams) => apiFetch('/escrows/fund', {
+        mutationFn: (params: FundEscrowParams) => apiFetch<EscrowSigningResponse>('/escrows/fund', {
             method: "POST",
             body: params,
         }),
@@ -57,7 +62,7 @@ export function useEscrows() {
     });
 
     const { mutateAsync: syncEscrow } = useMutation({
-        mutationFn: (params: SyncEscrowParams) => apiFetch('/escrows/sync', {
+        mutationFn: (params: SyncEscrowParams) => apiFetch<void>('/escrows/sync', {
             method: "POST",
             body: params,
         }),
@@ -67,7 +72,7 @@ export function useEscrows() {
     });
 
     const { mutateAsync: markFiatSent } = useMutation({
-        mutationFn: ({ escrowId, params }: { escrowId: string, params: FiatSentParams }) => apiFetch(`/escrows/${escrowId}/fiat-sent`, {
+        mutationFn: ({ escrowId, params }: { escrowId: string, params: FiatSentParams }) => apiFetch<EscrowSigningResponse>(`/escrows/${escrowId}/fiat-sent`, {
             method: "POST",
             body: params,
         }),
@@ -77,7 +82,7 @@ export function useEscrows() {
     });
 
     const { mutateAsync: releaseEscrow } = useMutation({
-        mutationFn: (params: ReleaseEscrowParams) => apiFetch('/escrows/release', {
+        mutationFn: (params: ReleaseEscrowParams) => apiFetch<EscrowSigningResponse>('/escrows/release', {
             method: "POST",
             body: params,
         }),
@@ -90,7 +95,7 @@ export function useEscrows() {
         mutationFn: ({ escrowId, file }: { escrowId: string, file: File }) => {
             const formData = new FormData();
             formData.append("file", file);
-            return apiFetch(`/escrows/${escrowId}/evidence`, {
+            return apiFetch<{ url: string }>(`/escrows/${escrowId}/evidence`, {
                 method: "POST",
                 body: formData,
             });
