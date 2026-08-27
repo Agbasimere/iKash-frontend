@@ -1,18 +1,21 @@
 "use client";
 
-import { use, useEffect, useState, useCallback, useMemo } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import { Aside } from "@/app/components/Aside";
 import { Header } from "@/app/components/Header";
 import { TradeDetails } from "../components/TradeDetails";
-import { TradeEvidenceUploader } from "../components/TradeEvidenceUploader";
-import { EvidencePreview } from "../components/EvidencePreview";
-import { Chat } from "../../components/Chat";
+import dynamic from "next/dynamic";
+const TradeEvidenceUploader = dynamic(() => import("../components/TradeEvidenceUploader").then((mod) => mod.TradeEvidenceUploader), { ssr: false });
+const EvidencePreview = dynamic(() => import("../components/EvidencePreview").then((mod) => mod.EvidencePreview), { ssr: false });
+const Chat = dynamic(() => import("../../components/Chat").then((mod) => mod.Chat), { ssr: false });
 import { useUser } from "@/features/user/presentation/context/UserContext";
 import type { Order } from "@/features/order/models/order";
 import { useOrders, ApiError } from "@/features/order/hooks/useOrders";
 import { canCancelOrder } from "@/features/order/utils/canCancelOrder";
+import { createDemoOrder } from "@/features/order/mocks/demo-order";
+import { DEMO_MODE } from "@/config/demo-mode";
 import { CancelOrderModal } from "../components/CancelOrderModal";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { ArrowLeft, AlertTriangle, Ban, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,7 +32,7 @@ export default function TradePage({ params }: PageProps) {
     const { orderId } = use(params);
     const { currentUser } = useUser();
     const { getOrder, cancelOrder } = useOrders();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
 
     const [order, setOrder] = useState<Order | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -37,85 +40,14 @@ export default function TradePage({ params }: PageProps) {
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
 
-    // Create a demo order object when path is /demo or starting with mock-
-    const demoOrder = useMemo((): Order | null => {
-        if (!currentUser) return null;
-        return {
-            orderId: "mock-uuid-1",
-            offerId: "offer-1",
-            buyerId: currentUser.userId,
-            sellerId: "seller-123",
-            assetAmount: "0.05",
-            fiatAmount: "3250.00",
-            orderStatus: "pending",
-            createdAt: "2026-10-24T12:00:00.000Z",
-            expiresAt: "2026-10-24T13:00:00.000Z",
-            buyer: {
-                userId: currentUser.userId,
-                alias: currentUser.alias || "Buyer",
-                publicKey: currentUser.publicKey || "G_BUYER_KEY_MOCK...",
-                kycStatus: currentUser.kycStatus || "approved",
-                notificationsEnabled: false,
-                pendingAccountInfo: false,
-                totalVolume: "0",
-                createdAt: "2026-01-01T00:00:00.000Z",
-            },
-            seller: {
-                userId: "seller-123",
-                alias: "CryptoKing_99",
-                publicKey: "G_SELLER_KEY_MOCK...",
-                kycStatus: "approved",
-                notificationsEnabled: false,
-                pendingAccountInfo: false,
-                totalVolume: "15000",
-                createdAt: "2026-01-01T00:00:00.000Z",
-            },
-            offer: {
-                offerId: "offer-1",
-                creatorId: "seller-123",
-                price: "65000",
-                assetCode: "USDC",
-                type: "sell",
-                minAmount: "10",
-                maxAmount: "10000",
-                status: "active",
-                payment_methods: [
-                    {
-                        payment_id: "pm-1",
-                        bankName: "Bank Transfer SEPA",
-                        account_identifier: "ES12 3456 7890 1234 5678",
-                        beneficiary_name: "QuantVortex_LP",
-                        payment_provider: {
-                            name: "Bank Transfer SEPA",
-                            type: "bank",
-                        }
-                    }
-                ],
-                paymentMethods: [
-                    {
-                        paymentId: "pm-1",
-                        bankName: "Bank Transfer SEPA",
-                        accountDetails: "ES12 3456 7890 1234 5678",
-                        beneficiaryName: "QuantVortex_LP",
-                        type: "bank"
-                    }
-                ]
-            },
-            escrow: {
-                escrowId: "escrow-mock-1",
-                orderId: "mock-uuid-1",
-                escrowStatus: "pending" as const,
-                buyerAddress: currentUser.publicKey || "G_BUYER_KEY_MOCK...",
-                sellerAddress: "G_SELLER_KEY_MOCK...",
-                amount: "0.05",
-                evidenceUrl: null,
-            }
-        };
-    }, [currentUser]);
+    // Demo orders are only fabricated when the demo flag is on. With the flag
+    // off (production), /demo and mock-* ids fall through to the real order
+    // flow and surface a not-found/error state.
+    const isDemoOrder = DEMO_MODE && (orderId === "demo" || orderId.startsWith("mock-"));
 
     const fetchOrder = useCallback(async () => {
-        if (orderId === "demo" || orderId.startsWith("mock-")) {
-            setOrder(demoOrder);
+        if (isDemoOrder && currentUser) {
+            setOrder(createDemoOrder(currentUser));
             setIsLoading(false);
             return;
         }
@@ -134,7 +66,7 @@ export default function TradePage({ params }: PageProps) {
         } finally {
             setIsLoading(false);
         }
-    }, [orderId, getOrder, demoOrder]);
+    }, [orderId, getOrder, isDemoOrder, currentUser]);
 
     useEffect(() => {
         if (currentUser) {
@@ -143,7 +75,7 @@ export default function TradePage({ params }: PageProps) {
     }, [currentUser, fetchOrder]);
 
     const handleCancelOrder = useCallback(async () => {
-        if (!order || orderId === "demo" || orderId.startsWith("mock-")) {
+        if (!order || isDemoOrder) {
             setShowCancelModal(false);
             return;
         }
@@ -169,7 +101,7 @@ export default function TradePage({ params }: PageProps) {
         } finally {
             setIsCancelling(false);
         }
-    }, [order, orderId, cancelOrder, notify, fetchOrder]);
+    }, [order, isDemoOrder, cancelOrder, notify, fetchOrder]);
 
     if (!currentUser) {
         return (

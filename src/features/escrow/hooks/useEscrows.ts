@@ -1,5 +1,6 @@
-import { useCallback } from "react";
-import { useUser } from "../../user/presentation/context/UserContext";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface OpenEscrowParams {
     orderId: string;
@@ -33,95 +34,82 @@ export interface ReleaseEscrowParams {
 }
 
 export function useEscrows() {
-    const { accessToken, logout } = useUser();
+    const { apiFetch } = useApi();
+    const queryClient = useQueryClient();
 
-    const handleResponse = useCallback(async (res: Response, defaultMsg: string) => {
-        if (res.status === 401) {
-            logout();
-            throw new Error("Sesión expirada. Por favor, inicia sesión nuevamente.");
+    const { mutateAsync: openEscrow } = useMutation({
+        mutationFn: (params: OpenEscrowParams) => apiFetch('/escrows/open', {
+            method: "POST",
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
         }
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            const msg = errData.message ? (Array.isArray(errData.message) ? errData.message.join(', ') : errData.message) : defaultMsg;
-            throw new Error(msg);
+    });
+
+    const { mutateAsync: fundEscrow } = useMutation({
+        mutationFn: (params: FundEscrowParams) => apiFetch('/escrows/fund', {
+            method: "POST",
+            body: JSON.stringify(params),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
         }
-        return res.json();
-    }, [logout]);
+    });
 
-    const openEscrow = useCallback(async (params: OpenEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/open`, {
+    const { mutateAsync: syncEscrow } = useMutation({
+        mutationFn: (params: SyncEscrowParams) => apiFetch('/escrows/sync', {
             method: "POST",
-            headers,
             body: JSON.stringify(params),
-        });
-        return await handleResponse(res, "Error al abrir el contrato de escrow");
-    }, [accessToken, handleResponse]);
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const fundEscrow = useCallback(async (params: FundEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/fund`, {
+    const { mutateAsync: markFiatSent } = useMutation({
+        mutationFn: ({ escrowId, params }: { escrowId: string, params: FiatSentParams }) => apiFetch(`/escrows/${escrowId}/fiat-sent`, {
             method: "POST",
-            headers,
             body: JSON.stringify(params),
-        });
-        return await handleResponse(res, "Error al preparar la transacción de fondeo");
-    }, [accessToken, handleResponse]);
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const syncEscrow = useCallback(async (params: SyncEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/sync`, {
+    const { mutateAsync: releaseEscrow } = useMutation({
+        mutationFn: (params: ReleaseEscrowParams) => apiFetch('/escrows/release', {
             method: "POST",
-            headers,
             body: JSON.stringify(params),
-        });
-        return await handleResponse(res, "Error al sincronizar la transacción en blockchain");
-    }, [accessToken, handleResponse]);
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-    const markFiatSent = useCallback(async (escrowId: string, params: FiatSentParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    const { mutateAsync: uploadEvidenceMutation } = useMutation({
+        mutationFn: ({ escrowId, file }: { escrowId: string, file: File }) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            return apiFetch(`/escrows/${escrowId}/evidence`, {
+                method: "POST",
+                body: formData,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+        }
+    });
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/${escrowId}/fiat-sent`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(params),
-        });
-        return await handleResponse(res, "Error al confirmar el envío de pago");
-    }, [accessToken, handleResponse]);
+    const wrappedMarkFiatSent = (escrowId: string, params: FiatSentParams) => markFiatSent({ escrowId, params });
+    const wrappedUploadEvidence = (escrowId: string, file: File) => uploadEvidenceMutation({ escrowId, file });
 
-    const releaseEscrow = useCallback(async (params: ReleaseEscrowParams) => {
-        const headers: Record<string, string> = { "Content-type": "application/json" };
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/release`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(params),
-        });
-        return await handleResponse(res, "Error al liberar los fondos del escrow");
-    }, [accessToken, handleResponse]);
-
-    const uploadEvidence = useCallback(async (escrowId: string, file: File) => {
-        const headers: Record<string, string> = {};
-        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/escrows/${escrowId}/evidence`, {
-            method: "POST",
-            headers,
-            body: formData,
-        });
-        return await handleResponse(res, "Error al subir el comprobante de pago");
-    }, [accessToken, handleResponse]);
-
-    return { openEscrow, fundEscrow, syncEscrow, markFiatSent, releaseEscrow, uploadEvidence };
+    return { 
+        openEscrow, 
+        fundEscrow, 
+        syncEscrow, 
+        markFiatSent: wrappedMarkFiatSent, 
+        releaseEscrow, 
+        uploadEvidence: wrappedUploadEvidence 
+    };
 }

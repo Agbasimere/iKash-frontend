@@ -4,8 +4,9 @@ import Image from "next/image";
 import { useWallet } from "@/features/wallet";
 import { useWalletBalance } from "@/features/wallet/presentation/hooks/useWalletBalance";
 import { useState } from "react";
-import { SendFundsModal } from "./SendFundsModal";
-import { ReceiveFundsModal } from "./ReceiveFundsModal";
+import dynamic from "next/dynamic";
+const SendFundsModal = dynamic(() => import("./SendFundsModal").then(mod => mod.SendFundsModal), { ssr: false });
+const ReceiveFundsModal = dynamic(() => import("./ReceiveFundsModal").then(mod => mod.ReceiveFundsModal), { ssr: false });
 import { useSearchParams } from "next/navigation";
 
 export function WalletDashboard() {

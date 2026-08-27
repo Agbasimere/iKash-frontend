@@ -102,13 +102,10 @@ export default function OrdersPage() {
   }, [formattedOrders, statusFilter, operationFilter]);
 
   const handleRowClick = (orderId: string) => {
+    // All rows navigate to the real order flow. Mock ids (when present) fall
+    // through to the backend lookup and surface a not-found state instead of
+    // fabricated data — see IKSH-46 and IKSH-19.
     router.push(`/p2p/orders/${orderId}`);
-  };
-
-  const handleRetry = () => {
-    if (currentUser?.userId) {
-      fetchUserOrders(currentUser.userId);
-    }
   };
 
   return (
