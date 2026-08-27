@@ -2,10 +2,11 @@
 
 import Image from 'next/image';
 import { CloseModalProps } from "@/app/utils/closeModalProps";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWallet, useWalletBalance, type AssetBalance } from "@/features/wallet";
 import { useSend } from "@/features/wallet/presentation/hooks/useSend";
 import { useSearchParams } from "next/navigation";
+import { useFocusTrap } from "@/app/hooks/useFocusTrap";
 
 function truncateAddress(addr: string) {
     return addr.length > 16 ? `${addr.slice(0, 6)}...${addr.slice(-6)}` : addr;
@@ -44,6 +45,7 @@ export function SendFundsModal({ onClose }: CloseModalProps) {
     const [recipientInput, setRecipientInput] = useState(walletQuery);
     const [amount, setAmount] = useState("");
     const [inputError, setInputError] = useState<string | null>(null);
+    const recipientInputRef = useRef<HTMLInputElement>(null);
 
     const assetName = getAssetName(sendableAsset);
     const isTransacting = state.step === "loading" || state.step === "signing" || state.step === "submitting";
@@ -58,6 +60,11 @@ export function SendFundsModal({ onClose }: CloseModalProps) {
         reset();
         onClose();
     };
+
+    const panelRef = useFocusTrap<HTMLDivElement>({
+        onClose: !isTransacting ? handleClose : undefined,
+        initialFocusRef: recipientInputRef,
+    });
 
     const isStellarAddress = (v: string) => /^G[A-Z0-9]{55}$/.test(v);
 
@@ -92,13 +99,18 @@ export function SendFundsModal({ onClose }: CloseModalProps) {
             onClick={!isTransacting ? handleClose : undefined}
         >
             <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="send-funds-title"
+                tabIndex={-1}
                 className="bg-[#0D1117F2] h-full w-md p-8 border-r border-white/10 flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex flex-col">
-                        <h2 className="text-white text-[30px] font-bold uppercase">{headerTitle}</h2>
+                        <h2 id="send-funds-title" className="text-white text-[30px] font-bold uppercase">{headerTitle}</h2>
                         {headerSubtitle && <p className="text-[#C2C7D0] text-[14px]">{headerSubtitle}</p>}
                     </div>
                     {!isTransacting && (
@@ -118,6 +130,7 @@ export function SendFundsModal({ onClose }: CloseModalProps) {
                         <div className="flex flex-col">
                             <p className="text-[#C2C7D0] text-[12px] mb-2 uppercase">Recipient Address or Alias</p>
                             <input
+                                ref={recipientInputRef}
                                 type="text"
                                 placeholder="alex.ikash or GXXXXXX..."
                                 value={recipientInput}
