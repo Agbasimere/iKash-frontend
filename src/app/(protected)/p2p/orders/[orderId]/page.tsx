@@ -10,7 +10,8 @@ const EvidencePreview = dynamic(() => import("../components/EvidencePreview").th
 const Chat = dynamic(() => import("../../components/Chat").then((mod) => mod.Chat), { ssr: false });
 import { useUser } from "@/features/user/presentation/context/UserContext";
 import type { Order } from "@/features/order/models/order";
-import { useOrders, ApiError } from "@/features/order/hooks/useOrders";
+import { useOrders } from "@/features/order/hooks/useOrders";
+import { ApiError } from "@/lib/api";
 import { canCancelOrder } from "@/features/order/utils/canCancelOrder";
 import { createDemoOrder } from "@/features/order/mocks/demo-order";
 import { DEMO_MODE } from "@/config/demo-mode";
