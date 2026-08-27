@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { ReceiveFundsModal } from "../ReceiveFundsModal";
 
 const walletMock = vi.hoisted(() => ({
@@ -18,18 +18,40 @@ vi.mock("qrcode.react", () => ({
     QRCodeSVG: () => <svg data-testid="mock-qr" />,
 }));
 
+vi.mock("next/dynamic", () => {
+    const React = require("react");
+    return {
+        __esModule: true,
+        default: (importFn: () => Promise<any>) => {
+            const DynamicComponent = (props: any) => {
+                const [Component, setComponent] = React.useState<any>(null);
+                React.useEffect(() => {
+                    importFn().then((mod) => {
+                        setComponent(() => mod?.default ?? mod);
+                    });
+                }, []);
+                if (!Component) return null;
+                return React.createElement(Component, props);
+            };
+            return DynamicComponent;
+        },
+    };
+});
+
 describe("ReceiveFundsModal", () => {
     beforeEach(() => {
         walletMock.publicKey = "GCONNECTEDWALLETADDRESS";
         document.body.innerHTML = "";
     });
 
-    it("renders a dialog labelled Receive funds when a wallet is connected", () => {
+    it("renders a dialog labelled Receive funds when a wallet is connected", async () => {
         render(<ReceiveFundsModal onClose={vi.fn()} />);
 
         const dialog = screen.getByRole("dialog", { name: "Receive funds" });
         expect(dialog.getAttribute("aria-modal")).toBe("true");
-        expect(screen.getByTestId("mock-qr")).toBeTruthy();
+        await waitFor(() => {
+            expect(screen.getByTestId("mock-qr")).toBeTruthy();
+        });
     });
 
     it("moves initial focus to the first focusable control", () => {
