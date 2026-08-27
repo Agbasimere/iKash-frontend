@@ -81,6 +81,7 @@ export function ActiveOrderCard({ order, currentUserId }: ActiveOrderCardProps) 
                     </span>
                     {/* Border colored, text white */}
                     <span
+                        role="status"
                         className={`text-[11px] font-bold tracking-[0.12em] uppercase px-3 py-1 rounded-full border text-white ${statusBorder}`}
                     >
                         {displayStatus}
