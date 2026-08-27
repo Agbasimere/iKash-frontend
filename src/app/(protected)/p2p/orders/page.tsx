@@ -72,7 +72,7 @@ function OrdersSkeleton() {
 export default function OrdersPage() {
   const router = useRouter();
   const { currentUser } = useUser();
-  const { orders: realOrders, fetchUserOrders, isLoading, hasFetched, error } = useOrders();
+  const { orders: realOrders, fetchUserOrders, isLoading, hasFetched, error, refetch } = useOrders();
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [operationFilter, setOperationFilter] = useState("All");
 
@@ -106,6 +106,10 @@ export default function OrdersPage() {
     // through to the backend lookup and surface a not-found state instead of
     // fabricated data — see IKSH-46 and IKSH-19.
     router.push(`/p2p/orders/${orderId}`);
+  };
+
+  const handleRetry = () => {
+    void refetch();
   };
 
   return (

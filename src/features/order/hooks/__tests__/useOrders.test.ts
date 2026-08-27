@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useOrders } from "../useOrders";
 import { ApiError } from "@/lib/api";
 import * as UserContextModule from "../../../user/presentation/context/UserContext";
@@ -166,21 +166,19 @@ describe("useOrders", () => {
                 mockFetchResponse(200, apiOrders),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             await act(async () => {
                 await result.current.fetchUserOrders("user-1");
             });
 
-            expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/orders?userId=user-1"),
-                expect.objectContaining({
-                    headers: expect.objectContaining({
-                        Authorization: "Bearer test-token",
-                    }),
-                }),
-            );
-            expect(result.current.orders).toEqual(apiOrders);
+            await waitFor(() => {
+                expect(result.current.orders).toEqual(apiOrders);
+            });
+
+            const [url, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+            expect(url).toContain("/orders?userId=user-1");
+            expect(options.headers.get("Authorization")).toBe("Bearer test-token");
             expect(result.current.isLoading).toBe(false);
             expect(result.current.error).toBeNull();
             expect(result.current.hasFetched).toBe(true);
@@ -191,15 +189,18 @@ describe("useOrders", () => {
                 mockFetchResponse(200, []),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             await act(async () => {
                 await result.current.fetchUserOrders("user-1");
             });
 
+            await waitFor(() => {
+                expect(result.current.hasFetched).toBe(true);
+            });
+
             expect(result.current.orders).toEqual([]);
             expect(result.current.error).toBeNull();
-            expect(result.current.hasFetched).toBe(true);
         });
 
         it("exposes an error and clears orders when the request fails", async () => {
@@ -207,14 +208,17 @@ describe("useOrders", () => {
                 mockFetchResponse(500, { message: "Orders not found" }),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             await act(async () => {
                 await result.current.fetchUserOrders("user-1");
             });
 
+            await waitFor(() => {
+                expect(result.current.error).toBe("Orders not found");
+            });
+
             expect(result.current.orders).toEqual([]);
-            expect(result.current.error).toBe("Orders not found");
             expect(result.current.isLoading).toBe(false);
             expect(result.current.hasFetched).toBe(true);
         });
@@ -227,21 +231,23 @@ describe("useOrders", () => {
                 }),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
-            let pending: Promise<void> | undefined;
             act(() => {
-                pending = result.current.fetchUserOrders("user-1");
+                void result.current.fetchUserOrders("user-1");
             });
 
-            expect(result.current.isLoading).toBe(true);
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(true);
+            });
 
             await act(async () => {
                 resolveFetch(mockFetchResponse(200, []));
-                await pending;
             });
 
-            expect(result.current.isLoading).toBe(false);
+            await waitFor(() => {
+                expect(result.current.isLoading).toBe(false);
+            });
         });
     });
 });

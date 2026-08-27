@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OrdersPage from "../page";
 import type { Order } from "@/features/order/models/order";
 import type { Users } from "@/features/user/models/users";
@@ -68,7 +69,21 @@ function mockFetchResponse(status: number, body: unknown) {
         ok: status >= 200 && status < 300,
         status,
         json: async () => body,
+        text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
     } as Response;
+}
+
+function renderOrdersPage() {
+    const client = new QueryClient({
+        defaultOptions: {
+            queries: { retry: false },
+        },
+    });
+    return render(
+        <QueryClientProvider client={client}>
+            <OrdersPage />
+        </QueryClientProvider>,
+    );
 }
 
 function orderRows() {
@@ -89,12 +104,13 @@ describe("OrdersPage", () => {
             setIsLoading: vi.fn(),
         } as unknown as ReturnType<typeof UserContextModule.useUser>);
         vi.stubGlobal("fetch", vi.fn());
+        vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3000");
     });
 
     it("shows loading skeletons while the orders request is in flight", () => {
         (fetch as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(screen.getByTestId("orders-skeleton")).toBeTruthy();
         expect(screen.queryByText("You do not have any orders yet.")).toBeNull();
@@ -104,7 +120,7 @@ describe("OrdersPage", () => {
     it("shows the empty state when the API returns zero orders", async () => {
         (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockFetchResponse(200, []));
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("You do not have any orders yet.")).toBeTruthy();
         expect(screen.queryByTestId("orders-skeleton")).toBeNull();
@@ -120,7 +136,7 @@ describe("OrdersPage", () => {
             mockFetchResponse(200, [makeOrder({ orderId: "order-1" })]),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("Alice")).toBeTruthy();
         expect(orderRows()).toHaveLength(1);
@@ -144,7 +160,7 @@ describe("OrdersPage", () => {
             ]),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("Alice")).toBeTruthy();
         expect(screen.getByText("Bob")).toBeTruthy();
@@ -169,7 +185,7 @@ describe("OrdersPage", () => {
             ]),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("Alice")).toBeTruthy();
         expect(screen.queryByText("Intruder")).toBeNull();
@@ -181,7 +197,7 @@ describe("OrdersPage", () => {
     it("requests orders for the authenticated user", async () => {
         (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockFetchResponse(200, []));
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         await waitFor(() => {
             expect(fetch).toHaveBeenCalledWith(
@@ -196,7 +212,7 @@ describe("OrdersPage", () => {
             mockFetchResponse(500, { message: "Orders not found" }),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByRole("alert")).toBeTruthy();
         expect(screen.getByText("Could not load your orders.")).toBeTruthy();
@@ -212,7 +228,7 @@ describe("OrdersPage", () => {
                 mockFetchResponse(200, [makeOrder({ orderId: "order-1" })]),
             );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByRole("button", { name: /retry/i })).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: /retry/i }));
@@ -227,7 +243,7 @@ describe("OrdersPage", () => {
             mockFetchResponse(200, [makeOrder({ orderId: "order-1", orderStatus: "pending" })]),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("Alice")).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: "COMPLETED" }));
@@ -242,7 +258,7 @@ describe("OrdersPage", () => {
             mockFetchResponse(200, [makeOrder({ orderId: "order-42" })]),
         );
 
-        render(<OrdersPage />);
+        renderOrdersPage();
 
         expect(await screen.findByText("Alice")).toBeTruthy();
         fireEvent.click(orderRows()[0]);

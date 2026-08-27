@@ -14,11 +14,22 @@ export function useOrders() {
 
     const [userId, setUserId] = useState<string | null>(null);
 
-    const { data: orders = [] } = useQuery<Order[]>({
+    const {
+        data: orders = [],
+        isLoading,
+        isFetched,
+        isError,
+        error: queryError,
+        refetch,
+    } = useQuery<Order[]>({
         queryKey: userId ? queryKeys.orders.user(userId) : queryKeys.orders.all,
         queryFn: () => apiFetch(userId ? `/orders?userId=${userId}` : `/orders`),
         enabled: !!userId,
     });
+
+    const error = isError
+        ? (queryError instanceof Error ? queryError.message : "Orders not found")
+        : null;
 
     const fetchUserOrders = useCallback(async (id: string) => {
         setUserId(id);
@@ -67,7 +78,11 @@ export function useOrders() {
 
     return { 
         orders, 
-        order: null, 
+        order: null,
+        isLoading: isLoading || (!!userId && !isFetched && !isError),
+        hasFetched: isFetched,
+        error,
+        refetch,
         createOrder, 
         getOrder, 
         updateOrder: wrappedUpdateOrder, 
