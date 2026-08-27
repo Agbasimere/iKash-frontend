@@ -14,6 +14,7 @@ export function useUsers() {
     const queryClient = useQueryClient();
 
     const [userFound, setUserFound] = useState<Record<string, Users>>({});
+    const [setupError, setSetupError] = useState<string | null>(null);
 
     const { data: users = [] } = useQuery<Users[]>({
         queryKey: queryKeys.users.all,
@@ -116,6 +117,7 @@ export function useUsers() {
     };
 
     const setupAccount = async (userId: string, payload: SetupAccountPayload): Promise<Users | null> => {
+        setSetupError(null);
         try {
             const data = await apiFetch<{ user: Users; access_token: string }>(`/users/${userId}/setup`, {
                 method: "POST",
@@ -126,20 +128,25 @@ export function useUsers() {
             return data.user;
         } catch (error) {
             console.error('Error in setupAccount:', error);
+            setSetupError(error instanceof Error ? error.message : 'Setup account error');
             return null;
         }
     };
 
-    return { 
-        users, 
-        user: null, 
-        getUser, 
-        createUser, 
-        updateUser, 
-        uploadProfilePicture, 
-        userFound, 
-        getOrCreateByWallet, 
-        checkAliasAvailable, 
-        setupAccount 
+    const clearSetupError = () => setSetupError(null);
+
+    return {
+        users,
+        user: null,
+        getUser,
+        createUser,
+        updateUser,
+        uploadProfilePicture,
+        userFound,
+        getOrCreateByWallet,
+        checkAliasAvailable,
+        setupAccount,
+        setupError,
+        clearSetupError,
     };
 }
