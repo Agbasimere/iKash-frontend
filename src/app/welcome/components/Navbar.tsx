@@ -31,7 +31,7 @@ export function Navbar({ onConnectClick }: { onConnectClick?: () => void }) {
 	}, []);
 
 	return (
-		<nav className="w-full bg-[#010308CC] border-b border-[#FFFFFF1A] backdrop-blur-md sticky top-0 z-50 px-4 md:px-8">
+		<nav aria-label="Public Navigation" className="w-full bg-[#010308CC] border-b border-[#FFFFFF1A] backdrop-blur-md sticky top-0 z-50 px-4 md:px-8">
 			<div className="max-w-7xl mx-auto flex items-center justify-between h-16">
 				<div className="flex flex-row items-center gap-4">
 					<Image
@@ -98,6 +98,8 @@ export function Navbar({ onConnectClick }: { onConnectClick?: () => void }) {
 				<div className="md:hidden flex items-center">
 					<button
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+						aria-label="Toggle navigation menu"
+						aria-expanded={mobileMenuOpen}
 						className="text-gray-300 hover:text-white transition-colors"
 					>
 						{mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -108,7 +110,7 @@ export function Navbar({ onConnectClick }: { onConnectClick?: () => void }) {
 			{/* Mobile Menu Dropdown */}
 			{mobileMenuOpen && (
 				<div className="md:hidden absolute top-16 left-0 w-full bg-[#010308] border-b border-[#FFFFFF1A] shadow-2xl z-40 py-4 px-4 flex flex-col gap-6">
-					<ul className="flex flex-col gap-4">
+					<ul className="flex flex-col gap-4" aria-label="Mobile Navigation Menu">
 						{navLinks.map((link) => {
 							const isActive = pathname === link.href;
 							return (
