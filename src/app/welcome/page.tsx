@@ -794,8 +794,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#010308] text-white flex flex-col font-sans overflow-x-hidden selection:bg-[#BCED09] selection:text-[#010308]">
       <Navbar onConnectClick={handleConnectWallet} />
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative w-full min-h-[920px] pt-12 md:pt-20 flex items-center justify-center bg-[radial-gradient(113.24%_213.1%_at_100%_0%,_rgba(188,237,9,0.15)_0%,_rgba(188,237,9,0)_40%),_radial-gradient(113.24%_213.1%_at_0%_100%,_rgba(188,237,9,0.05)_0%,_rgba(188,237,9,0)_40%)] border-b border-[#ffffff05]">
+      <main className="flex-1">
+        {/* --- HERO SECTION --- */}
+        <section className="relative w-full min-h-[920px] pt-12 md:pt-20 flex items-center justify-center bg-[radial-gradient(113.24%_213.1%_at_100%_0%,_rgba(188,237,9,0.15)_0%,_rgba(188,237,9,0)_40%),_radial-gradient(113.24%_213.1%_at_0%_100%,_rgba(188,237,9,0.05)_0%,_rgba(188,237,9,0)_40%)] border-b border-[#ffffff05]">
         {/* Background Image & Rectangular Left Overlay */}
         <div className="absolute inset-0 w-full h-full pointer-events-none">
           <Image
@@ -922,6 +923,7 @@ export default function HomePage() {
 
       {/* --- CTA SECTION (Extracted to Standalone Component) --- */}
       <CallToActionSection handleConnectWallet={handleConnectWallet} />
+      </main>
 
       {/* --- FOOTER SECTION --- */}
       <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-16 pb-8">

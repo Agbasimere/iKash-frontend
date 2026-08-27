@@ -70,12 +70,12 @@ export default function InfoLayout({
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-12 md:py-16 relative z-10 flex flex-col lg:flex-row gap-10">
         {/* Left Sub-Navigation Sidebar */}
-        <aside className="w-full lg:w-[320px] shrink-0 space-y-6">
+        <aside aria-label="Documentation Navigation" className="w-full lg:w-[320px] shrink-0 space-y-6">
           <div className="bg-[#18181b]/35 border border-[#ffffff08] rounded-3xl p-6 md:p-8 backdrop-blur-sm">
             <h2 className="text-[#8F8389] text-xs font-black uppercase tracking-[2px] mb-6">
               Documentation Sections
             </h2>
-            <nav className="flex flex-col gap-3">
+            <nav aria-label="Documentation Sections" className="flex flex-col gap-3">
               {tabs.map((tab) => {
                 const isActive = pathname === tab.href;
                 const Icon = tab.icon;
