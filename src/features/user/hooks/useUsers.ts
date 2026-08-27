@@ -6,38 +6,37 @@ import { Users } from "../models/users";
 import { CreateUser } from "../models/createUser";
 import { SetupAccountPayload } from "../models/setupAccount";
 import { useUser } from "../presentation/context/UserContext";
-import { useApi } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function useUsers() {
     const { setAccessToken, setCurrentUser } = useUser();
-    const { apiFetch } = useApi();
     const queryClient = useQueryClient();
 
     const [userFound, setUserFound] = useState<Record<string, Users>>({});
 
     const { data: users = [] } = useQuery<Users[]>({
         queryKey: queryKeys.users.all,
-        queryFn: () => apiFetch('/users')
+        queryFn: () => apiFetch<Users[]>('/users')
     });
 
     const getUser = useCallback(async (userId: string) => {
         try {
             const data = await queryClient.fetchQuery({
                 queryKey: queryKeys.users.detail(userId),
-                queryFn: () => apiFetch(`/users/${userId}`)
+                queryFn: () => apiFetch<Users>(`/users/${userId}`)
             });
             setUserFound(prev => ({ ...prev, [userId]: data }));
             return data;
         } catch (error) {
             console.error(error);
         }
-    }, [queryClient, apiFetch]);
+    }, [queryClient]);
 
     const { mutateAsync: createUserMutation } = useMutation({
-        mutationFn: (user: CreateUser) => apiFetch('/users', {
+        mutationFn: (user: CreateUser) => apiFetch<Users>('/users', {
             method: "POST",
-            body: JSON.stringify(user)
+            body: user
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
@@ -53,9 +52,9 @@ export function useUsers() {
     };
 
     const { mutateAsync: updateUserMutation } = useMutation({
-        mutationFn: ({ userId, userData }: { userId: string, userData: Partial<Users> }) => apiFetch(`/users/${userId}`, {
+        mutationFn: ({ userId, userData }: { userId: string, userData: Partial<Users> }) => apiFetch<Users>(`/users/${userId}`, {
             method: "PATCH",
-            body: JSON.stringify(userData)
+            body: userData
         }),
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
@@ -77,7 +76,7 @@ export function useUsers() {
         mutationFn: ({ userId, file }: { userId: string, file: File }) => {
             const formData = new FormData();
             formData.append("profileImage", file);
-            return apiFetch(`/users/${userId}/profile-picture`, {
+            return apiFetch<Users>(`/users/${userId}/profile-picture`, {
                 method: "PATCH",
                 body: formData
             });
@@ -100,7 +99,7 @@ export function useUsers() {
 
     const getOrCreateByWallet = async (publicKey: string): Promise<Users | null> => {
         try {
-            return await apiFetch(`/users/account?publicKey=${publicKey}`);
+            return await apiFetch<Users>(`/users/account?publicKey=${publicKey}`);
         } catch (error) {
             console.error('Error in getOrCreateByWallet:', error);
             return null;
@@ -109,7 +108,7 @@ export function useUsers() {
 
     const checkAliasAvailable = async (alias: string): Promise<{ available: boolean }> => {
         try {
-            return await apiFetch(`/users/validate-alias?alias=${alias}`);
+            return await apiFetch<{ available: boolean }>(`/users/validate-alias?alias=${alias}`);
         } catch (error) {
             console.error('Error in checkAliasAvailable:', error);
             return { available: false };
@@ -118,9 +117,9 @@ export function useUsers() {
 
     const setupAccount = async (userId: string, payload: SetupAccountPayload): Promise<Users | null> => {
         try {
-            const data = await apiFetch(`/users/${userId}/setup`, {
+            const data = await apiFetch<{ user: Users; access_token: string }>(`/users/${userId}/setup`, {
                 method: "POST",
-                body: JSON.stringify(payload)
+                body: payload
             });
             setCurrentUser(data.user);
             setAccessToken(data.access_token);

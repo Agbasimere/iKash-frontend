@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useApi } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface OpenEscrowParams {
@@ -34,13 +34,12 @@ export interface ReleaseEscrowParams {
 }
 
 export function useEscrows() {
-    const { apiFetch } = useApi();
     const queryClient = useQueryClient();
 
     const { mutateAsync: openEscrow } = useMutation({
         mutationFn: (params: OpenEscrowParams) => apiFetch('/escrows/open', {
             method: "POST",
-            body: JSON.stringify(params),
+            body: params,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
@@ -50,7 +49,7 @@ export function useEscrows() {
     const { mutateAsync: fundEscrow } = useMutation({
         mutationFn: (params: FundEscrowParams) => apiFetch('/escrows/fund', {
             method: "POST",
-            body: JSON.stringify(params),
+            body: params,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
@@ -60,7 +59,7 @@ export function useEscrows() {
     const { mutateAsync: syncEscrow } = useMutation({
         mutationFn: (params: SyncEscrowParams) => apiFetch('/escrows/sync', {
             method: "POST",
-            body: JSON.stringify(params),
+            body: params,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
@@ -70,7 +69,7 @@ export function useEscrows() {
     const { mutateAsync: markFiatSent } = useMutation({
         mutationFn: ({ escrowId, params }: { escrowId: string, params: FiatSentParams }) => apiFetch(`/escrows/${escrowId}/fiat-sent`, {
             method: "POST",
-            body: JSON.stringify(params),
+            body: params,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
@@ -80,7 +79,7 @@ export function useEscrows() {
     const { mutateAsync: releaseEscrow } = useMutation({
         mutationFn: (params: ReleaseEscrowParams) => apiFetch('/escrows/release', {
             method: "POST",
-            body: JSON.stringify(params),
+            body: params,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });

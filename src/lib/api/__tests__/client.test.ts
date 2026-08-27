@@ -5,6 +5,7 @@ import {
     setTokenProvider,
     setUnauthorizedHandler,
     setRefreshTokenHandler,
+    resetCsrfToken,
 } from "../client";
 import { ApiError } from "../errors";
 
@@ -27,9 +28,20 @@ function errorResponse(status: number, body: unknown): Response {
     } as Response;
 }
 
+function csrfResponse(): Response {
+    return jsonResponse({ csrfToken: "test-csrf-token" });
+}
+
+// Returns the last fetch call (the actual request, skipping the CSRF prefetch).
+function lastRequest(): [string, RequestInit] {
+    const calls = mockFetch.mock.calls;
+    return calls[calls.length - 1] as [string, RequestInit];
+}
+
 describe("apiFetch", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        resetCsrfToken();
         setTokenProvider(() => "test-token");
         setUnauthorizedHandler(null);
         setRefreshTokenHandler(null);
@@ -40,6 +52,7 @@ describe("apiFetch", () => {
         setTokenProvider(null);
         setUnauthorizedHandler(null);
         setRefreshTokenHandler(null);
+        resetCsrfToken();
     });
 
     describe("getApiBaseUrl", () => {
@@ -62,6 +75,7 @@ describe("apiFetch", () => {
             expect(mockFetch).toHaveBeenCalledWith(
                 "http://localhost:3000/test",
                 expect.objectContaining({
+                    credentials: "include",
                     headers: expect.objectContaining({
                         Authorization: "Bearer test-token",
                     }),
@@ -71,39 +85,45 @@ describe("apiFetch", () => {
         });
 
         it("makes a POST request with JSON body", async () => {
-            mockFetch.mockResolvedValueOnce(jsonResponse({ created: true }));
+            mockFetch
+                .mockResolvedValueOnce(csrfResponse())
+                .mockResolvedValueOnce(jsonResponse({ created: true }));
 
             await apiFetch("/test", {
                 method: "POST",
                 body: { name: "foo" },
             });
 
-            expect(mockFetch).toHaveBeenCalledWith(
-                "http://localhost:3000/test",
-                expect.objectContaining({
-                    method: "POST",
-                    body: JSON.stringify({ name: "foo" }),
-                    headers: expect.objectContaining({
-                        "Content-Type": "application/json",
-                    }),
+            expect(mockFetch.mock.calls[0][0]).toContain("/auth/csrf");
+            const [url, options] = lastRequest();
+            expect(url).toBe("http://localhost:3000/test");
+            expect(options).toEqual(expect.objectContaining({
+                method: "POST",
+                body: JSON.stringify({ name: "foo" }),
+                credentials: "include",
+                headers: expect.objectContaining({
+                    "Content-Type": "application/json",
+                    "x-csrf-token": "test-csrf-token",
                 }),
-            );
+            }));
         });
 
         it("returns undefined for 204 responses", async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                status: 204,
-                json: async () => {
-                    throw new Error("no body");
-                },
-            } as Response);
+            mockFetch
+                .mockResolvedValueOnce(csrfResponse())
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 204,
+                    json: async () => {
+                        throw new Error("no body");
+                    },
+                } as unknown as Response);
 
             const result = await apiFetch("/test", { method: "DELETE" });
             expect(result).toBeUndefined();
+            expect(lastRequest()[1].credentials).toBe("include");
         });
     });
-
     describe("authentication", () => {
         it("injects Authorization header when authenticated (default)", async () => {
             mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
@@ -125,8 +145,9 @@ describe("apiFetch", () => {
 
             await apiFetch("/test", { authenticated: false });
 
-            const [, options] = mockFetch.mock.calls[0];
-            expect(options.headers?.Authorization).toBeUndefined();
+            const [, options] = lastRequest();
+            expect((options.headers as Record<string, string> | undefined)?.Authorization).toBeUndefined();
+            expect(options.credentials).toBe("include");
         });
 
         it("does not inject Authorization header when no token is available", async () => {
@@ -135,8 +156,8 @@ describe("apiFetch", () => {
 
             await apiFetch("/test");
 
-            const [, options] = mockFetch.mock.calls[0];
-            expect(options.headers?.Authorization).toBeUndefined();
+            const [, options] = lastRequest();
+            expect((options.headers as Record<string, string> | undefined)?.Authorization).toBeUndefined();
         });
     });
 
@@ -236,20 +257,25 @@ describe("apiFetch", () => {
 
     describe("FormData handling", () => {
         it("does not set Content-Type for FormData bodies", async () => {
-            mockFetch.mockResolvedValueOnce(jsonResponse({ uploaded: true }));
+            mockFetch
+                .mockResolvedValueOnce(csrfResponse())
+                .mockResolvedValueOnce(jsonResponse({ uploaded: true }));
             const formData = new FormData();
             formData.append("file", new Blob(["test"]), "test.txt");
 
             await apiFetch("/upload", { method: "POST", body: formData });
 
-            const [, options] = mockFetch.mock.calls[0];
+            const [, options] = lastRequest();
             expect(options.body).toBe(formData);
             const headers = options.headers as Record<string, string>;
             expect(headers["Content-Type"]).toBeUndefined();
+            expect(headers["x-csrf-token"]).toBe("test-csrf-token");
         });
 
         it("preserves user-supplied Content-Type", async () => {
-            mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
+            mockFetch
+                .mockResolvedValueOnce(csrfResponse())
+                .mockResolvedValueOnce(jsonResponse({ ok: true }));
 
             await apiFetch("/test", {
                 method: "POST",
@@ -257,9 +283,51 @@ describe("apiFetch", () => {
                 headers: { "Content-Type": "text/plain" },
             });
 
-            const [, options] = mockFetch.mock.calls[0];
+            const [, options] = lastRequest();
             const headers = options.headers as Record<string, string>;
             expect(headers["Content-Type"]).toBe("text/plain");
+            expect(headers["x-csrf-token"]).toBe("test-csrf-token");
+        });
+    });
+
+    describe("CSRF protection", () => {
+        it("does not prefetch a CSRF token for GET requests", async () => {
+            mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+            await apiFetch("/test", { method: "GET" });
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [, options] = lastRequest();
+            expect((options.headers as Record<string, string>)["x-csrf-token"]).toBeUndefined();
+        });
+
+        it("caches the CSRF token across mutating requests", async () => {
+            mockFetch
+                .mockResolvedValueOnce(csrfResponse())
+                .mockResolvedValueOnce(jsonResponse({ ok: true }))
+                .mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+            await apiFetch("/test", { method: "POST", body: { a: 1 } });
+            await apiFetch("/test", { method: "PATCH", body: { a: 2 } });
+
+            expect(mockFetch.mock.calls[0][0]).toContain("/auth/csrf");
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+            const [, firstRequest] = mockFetch.mock.calls[1];
+            const [, secondRequest] = mockFetch.mock.calls[2];
+            expect((firstRequest.headers as Record<string, string>)["x-csrf-token"]).toBe("test-csrf-token");
+            expect((secondRequest.headers as Record<string, string>)["x-csrf-token"]).toBe("test-csrf-token");
+        });
+
+        it("still sends the request when the CSRF token cannot be fetched", async () => {
+            mockFetch
+                .mockResolvedValueOnce(errorResponse(500, { message: "csrf unavailable" }))
+                .mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+            await apiFetch("/test", { method: "PUT", body: { a: 1 } });
+
+            const [, options] = lastRequest();
+            expect((options.headers as Record<string, string>)["x-csrf-token"]).toBeUndefined();
+            expect(options.credentials).toBe("include");
         });
     });
 });

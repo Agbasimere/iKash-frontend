@@ -9,7 +9,7 @@ export function useChatMessages() {
 
     const getMessages = async (orderId: string) => {
         try {
-            const data = await apiFetch<Message[]>(`/chat-messages?orderId=${orderId}`, { authenticated: false });
+            const data = await apiFetch<Message[]>(`/chat-messages?orderId=${orderId}`);
             setMessages(data);
         } catch (error) {
             console.error(error);
@@ -30,7 +30,6 @@ export function useChatMessages() {
             const data = await apiFetch<Message>("/chat-messages", {
                 method: "POST",
                 body: newMessage,
-                authenticated: false,
             });
             setMessage(data);
         } catch (error) {

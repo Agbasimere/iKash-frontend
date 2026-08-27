@@ -8,6 +8,7 @@ export {
     setTokenProvider,
     setUnauthorizedHandler,
     setRefreshTokenHandler,
+    resetCsrfToken,
 } from "./api/client";
 export type { ApiFetchOptions } from "./api/client";
 export { ApiError } from "./api/errors";
