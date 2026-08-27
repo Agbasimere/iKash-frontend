@@ -1,155 +1,146 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users } from "../models/users";
 import { CreateUser } from "../models/createUser";
 import { SetupAccountPayload } from "../models/setupAccount";
 import { useUser } from "../presentation/context/UserContext";
+import { useApi } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useUsers() {
-    const [users, setUsers] = useState<Users[]>([]);
-    const [user, setUser] = useState<Users | null>(null);
-    const [userFound, setUserFound] = useState<Record<string, Users>>({})
-    const { accessToken, setAccessToken, setCurrentUser } = useUser();
+    const { setAccessToken, setCurrentUser } = useUser();
+    const { apiFetch } = useApi();
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`)
-            .then((res) => {
-                if (!res.ok) throw new Error('Not found users');
-                return res.json();
-            })
-            .then((data) => {
-                setUsers(data);
-            })
-            .catch(err => console.error(err));
-    }, []);
+    const [userFound, setUserFound] = useState<Record<string, Users>>({});
+
+    const { data: users = [] } = useQuery<Users[]>({
+        queryKey: queryKeys.users.all,
+        queryFn: () => apiFetch('/users')
+    });
 
     const getUser = useCallback(async (userId: string) => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`)
-            if (!res.ok) throw new Error('User not found');
-            const data = await res.json();
+            const data = await queryClient.fetchQuery({
+                queryKey: queryKeys.users.detail(userId),
+                queryFn: () => apiFetch(`/users/${userId}`)
+            });
             setUserFound(prev => ({ ...prev, [userId]: data }));
+            return data;
         } catch (error) {
-            console.error(error)
+            console.error(error);
         }
-    }, [])
+    }, [queryClient, apiFetch]);
+
+    const { mutateAsync: createUserMutation } = useMutation({
+        mutationFn: (user: CreateUser) => apiFetch('/users', {
+            method: "POST",
+            body: JSON.stringify(user)
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+        }
+    });
 
     const createUser = async (user: CreateUser) => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(user),
-            })
-            if (!res.ok) throw new Error('Create user error');
-            const data = await res.json();
-            setUser(data);
+            await createUserMutation(user);
         } catch (error) {
             console.error('Error creating user:', error);
         }
-    }
+    };
+
+    const { mutateAsync: updateUserMutation } = useMutation({
+        mutationFn: ({ userId, userData }: { userId: string, userData: Partial<Users> }) => apiFetch(`/users/${userId}`, {
+            method: "PATCH",
+            body: JSON.stringify(userData)
+        }),
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.userId) });
+            setCurrentUser(data);
+        }
+    });
 
     const updateUser = async (userId: string, userData: Partial<Users>): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(accessToken ? { "Authorization": `Bearer ${accessToken}` } : {}),
-                },
-                body: JSON.stringify(userData),
-            })
-            if (!res.ok) throw new Error('Update user error');
-            const data = await res.json();
-            setUser(data);
-            setCurrentUser(data);
-            return data;
+            return await updateUserMutation({ userId, userData });
         } catch (error) {
             console.error('Error updating user:', error);
             return null;
         }
-    }
+    };
+
+    const { mutateAsync: uploadProfilePictureMutation } = useMutation({
+        mutationFn: ({ userId, file }: { userId: string, file: File }) => {
+            const formData = new FormData();
+            formData.append("profileImage", file);
+            return apiFetch(`/users/${userId}/profile-picture`, {
+                method: "PATCH",
+                body: formData
+            });
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.userId) });
+            setCurrentUser(data);
+        }
+    });
 
     const uploadProfilePicture = async (userId: string, file: File): Promise<Users | null> => {
         try {
-            const formData = new FormData();
-            formData.append("profileImage", file);
-
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/profile-picture`, {
-                method: "PATCH",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                },
-                body: formData,
-            });
-
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(errorText || "Upload profile picture error");
-            }
-
-            const data = await res.json();
-            setUser(data);
-            setCurrentUser(data);
-            return data;
+            return await uploadProfilePictureMutation({ userId, file });
         } catch (error) {
             console.error("Error uploading profile picture:", error);
             return null;
         }
-    }
+    };
 
     const getOrCreateByWallet = async (publicKey: string): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/account?publicKey=${publicKey}`)
-            if (!res.ok) throw new Error('Get/Create account error');
-            const data = await res.json();
-            setUser(data);
-            return data;
+            return await apiFetch(`/users/account?publicKey=${publicKey}`);
         } catch (error) {
             console.error('Error in getOrCreateByWallet:', error);
             return null;
         }
-    }
+    };
 
     const checkAliasAvailable = async (alias: string): Promise<{ available: boolean }> => {
         try {
-            const headers: Record<string, string> = {};
-            if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/validate-alias?alias=${alias}`, { headers })
-            if (!res.ok) throw new Error('Check alias error');
-            return await res.json();
+            return await apiFetch(`/users/validate-alias?alias=${alias}`);
         } catch (error) {
             console.error('Error in checkAliasAvailable:', error);
             return { available: false };
         }
-    }
+    };
 
     const setupAccount = async (userId: string, payload: SetupAccountPayload): Promise<Users | null> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/setup`, {
+            const data = await apiFetch(`/users/${userId}/setup`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-                body: JSON.stringify(payload),
-            })
-            if (!res.ok) throw new Error('Setup account error');
-            const data = await res.json(); // Data is { user, access_token }
-            
-            // Update context with final user and token
+                body: JSON.stringify(payload)
+            });
             setCurrentUser(data.user);
             setAccessToken(data.access_token);
-            
             return data.user;
         } catch (error) {
             console.error('Error in setupAccount:', error);
             return null;
         }
-    }
+    };
 
-    return { users, user, getUser, createUser, updateUser, uploadProfilePicture, userFound, getOrCreateByWallet, checkAliasAvailable, setupAccount };
+    return { 
+        users, 
+        user: null, 
+        getUser, 
+        createUser, 
+        updateUser, 
+        uploadProfilePicture, 
+        userFound, 
+        getOrCreateByWallet, 
+        checkAliasAvailable, 
+        setupAccount 
+    };
 }

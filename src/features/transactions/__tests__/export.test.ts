@@ -279,10 +279,10 @@ describe("CSV Export Utility", () => {
 });
 
 describe("PDF Export Utility", () => {
-    it("generates a PDF file and triggers save", () => {
+    it("generates a PDF file and triggers save", async () => {
         const records = transactionExportService.mapOrdersToExportRecords(MOCK_ORDERS, MOCK_CURRENT_USER_ID);
 
-        exportTransactionsPdf(records, "test-filename.pdf", {
+        await exportTransactionsPdf(records, "test-filename.pdf", {
             status: "ALL",
             operation: "All",
             dateRange: { from: "2026-10-01", to: "2026-10-31" }

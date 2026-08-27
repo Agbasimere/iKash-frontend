@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useOrders, ApiError } from "../useOrders";
+import { useOrders } from "../useOrders";
+import { ApiError } from "@/lib/api";
 import * as UserContextModule from "../../../user/presentation/context/UserContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 
 vi.mock("../../../user/presentation/context/UserContext", () => ({
     useUser: vi.fn(),
@@ -14,7 +17,21 @@ function mockFetchResponse(status: number, body: unknown) {
         ok: status >= 200 && status < 300,
         status,
         json: async () => body,
+        text: async () => typeof body === "string" ? body : JSON.stringify(body),
     } as Response;
+}
+
+const createTestQueryClient = () => new QueryClient({
+    defaultOptions: {
+        queries: { retry: false },
+    },
+});
+
+export function createWrapper() {
+    const testQueryClient = createTestQueryClient();
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+        return React.createElement(QueryClientProvider, { client: testQueryClient }, children);
+    };
 }
 
 describe("useOrders", () => {
@@ -27,6 +44,7 @@ describe("useOrders", () => {
             logout,
         } as unknown as ReturnType<typeof UserContextModule.useUser>);
         vi.stubGlobal("fetch", vi.fn());
+        vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3000");
     });
 
     describe("cancelOrder", () => {
@@ -36,24 +54,18 @@ describe("useOrders", () => {
                 mockFetchResponse(200, updatedOrder),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             let response: unknown;
             await act(async () => {
                 response = await result.current.cancelOrder("order-1");
             });
 
-            expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/orders/order-1/cancel"),
-                expect.objectContaining({
-                    method: "POST",
-                    headers: expect.objectContaining({
-                        Authorization: "Bearer test-token",
-                    }),
-                }),
-            );
+            const [url, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+            expect(url).toContain("http://localhost:3000/orders/order-1/cancel");
+            expect(options.method).toBe("POST");
+            expect(options.headers.get("Authorization")).toBe("Bearer test-token");
             expect(response).toEqual(updatedOrder);
-            expect(result.current.order).toEqual(updatedOrder);
         });
 
         it("throws an ApiError carrying the HTTP status and backend error code on 409", async () => {
@@ -65,7 +77,7 @@ describe("useOrders", () => {
                 }),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             let caught: unknown;
             await act(async () => {
@@ -90,7 +102,7 @@ describe("useOrders", () => {
                 }),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             let caught: unknown;
             await act(async () => {
@@ -111,7 +123,7 @@ describe("useOrders", () => {
                 mockFetchResponse(401, {}),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             await act(async () => {
                 await expect(result.current.cancelOrder("order-1")).rejects.toThrow();
@@ -129,14 +141,14 @@ describe("useOrders", () => {
                 mockFetchResponse(200, { orderId: "order-1", orderStatus: "cancelled" }),
             );
 
-            const { result } = renderHook(() => useOrders());
+            const { result } = renderHook(() => useOrders(), { wrapper: createWrapper() });
 
             await act(async () => {
                 await result.current.cancelOrder("order-1");
             });
 
             const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-            expect((options.headers as Record<string, string>).Authorization).toBeUndefined();
+            expect(options.headers.get("Authorization")).toBeNull();
         });
     });
 });
