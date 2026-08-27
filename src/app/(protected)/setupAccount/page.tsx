@@ -15,7 +15,8 @@ import { SetupAccountPayload } from '../../../features/user/models/setupAccount'
 export default function SetupAccount() {
     const [stage, setStage] = useState<1 | 2 | 3>(1);
     const [formData, setFormData] = useState<SetupAccountPayload>({});
-    const { setupAccount } = useUsers();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { setupAccount, setupError, clearSetupError } = useUsers();
     const { currentUser, setCurrentUser } = useUser();
     const router = useRouter();
 
@@ -25,13 +26,21 @@ export default function SetupAccount() {
     };
 
     const handleFinish = async (data: Partial<SetupAccountPayload>) => {
+        if (!currentUser || isSubmitting) return;
+
         const finalData = { ...formData, ...data };
-        if (currentUser) {
+        setIsSubmitting(true);
+        clearSetupError();
+        try {
             const updated = await setupAccount(currentUser.userId, finalData);
             if (updated) {
                 setCurrentUser(updated);
                 router.push('/dashboard');
             }
+            // On failure, `setupError` is now populated by useUsers and Stage3
+            // keeps the entered values so the user can retry without re-typing.
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -56,7 +65,13 @@ export default function SetupAccount() {
                     <Header />
                     {stage === 1 && <Stage1 onNext={handleNext} />}
                     {stage === 2 && <Stage2 onNext={handleNext} />}
-                    {stage === 3 && <Stage3 onFinish={handleFinish} />}
+                    {stage === 3 && (
+                        <Stage3
+                            onFinish={handleFinish}
+                            isSubmitting={isSubmitting}
+                            submitError={setupError}
+                        />
+                    )}
                     
                     <button 
                         onClick={handleSkip}

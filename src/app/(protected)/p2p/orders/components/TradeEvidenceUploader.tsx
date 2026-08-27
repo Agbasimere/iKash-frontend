@@ -297,9 +297,9 @@ export function TradeEvidenceUploader({
                                 <Loader2 className="w-5 h-5 text-[#2B3400] animate-spin" /> UPLOADING...
                             </>
                         ) : uploadState === 'uploaded' ? (
-                            <>
+                            <span role="status">
                                 <CircleCheck className="w-5 h-5 text-[#2B3400] stroke-[3px]" /> EVIDENCE UPLOADED
-                            </>
+                            </span>
                         ) : (
                             <>
                                 <Upload className="w-4.5 h-4.5 stroke-[2.5px]" /> Upload Evidence
@@ -442,8 +442,7 @@ export function TradeEvidenceUploader({
                         WAITING FOR RELEASE
                     </button>
                 ) : escrowStatus === "released" ? (
-                    <div className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">
-                        <span className="text-[#DAFF00] font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">COMPLETED!</span>
+                    <div className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">                            <span role="status" className="text-[#DAFF00] font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">COMPLETED!</span>
                     </div>
                 ) : null}
 

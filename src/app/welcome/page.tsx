@@ -16,6 +16,7 @@ import { useWalletContext } from "../../features/wallet/presentation/context/Wal
 import { useWalletAvailability } from "../../features/wallet/presentation/hooks/useWalletAvailability";
 import { walletOptions } from "../../features/wallet/config/wallet-options";
 import { useRouter } from "next/navigation";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 // --- CUSTOM INTERACTIVE PLANET PARTICLES CANVAS (HERO) ---
 function PlanetParticles() {
@@ -519,7 +520,7 @@ function CallToActionSection({
 }
 
 // --- CONNECT WALLET MODAL COMPONENT (WITH TESTNET & ENVIRONMENT VALIDATION) ---
-function ConnectWalletModal({
+export function ConnectWalletModal({
   isOpen,
   onClose,
 }: {
@@ -548,14 +549,19 @@ function ConnectWalletModal({
     }
   }
 
-  if (!isOpen) return null;
-
   const handleClose = () => {
     if (isConnected) {
       disconnect();
     }
     onClose();
   };
+
+  const panelRef = useFocusTrap<HTMLDivElement>({
+    active: isOpen,
+    onClose: handleClose,
+  });
+
+  if (!isOpen) return null;
 
   const handleWalletConnect = async (selectedWalletId: string) => {
     if (isConnected && walletId && walletId !== selectedWalletId) {
@@ -580,6 +586,12 @@ function ConnectWalletModal({
 
   const selectedWalletName = walletOptions.find((w) => w.id === selectedWallet)?.name ?? "your wallet";
 
+  const dialogTitleId =
+    modalState === "connecting"
+      ? "connect-wallet-connecting-title"
+      : modalState === "failed"
+        ? "connect-wallet-failed-title"
+        : "connect-wallet-select-title";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -590,7 +602,14 @@ function ConnectWalletModal({
       />
 
       {/* Modal Box */}
-      <div className="relative w-full max-w-[500px] bg-[#0c0e12] border border-[#ffffff10] rounded-[32px] p-8 md:p-10 shadow-2xl z-10 text-white animate-[fadeInUp_0.3s_ease-out_forwards]">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={dialogTitleId}
+        tabIndex={-1}
+        className="relative w-full max-w-[500px] bg-[#0c0e12] border border-[#ffffff10] rounded-[32px] p-8 md:p-10 shadow-2xl z-10 text-white animate-[fadeInUp_0.3s_ease-out_forwards]"
+      >
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -613,7 +632,7 @@ function ConnectWalletModal({
 
         {modalState === "select" && (
           <div>
-            <h3 className="text-3xl font-black tracking-tight mb-2 text-white leading-tight">
+            <h3 id="connect-wallet-select-title" className="text-3xl font-black tracking-tight mb-2 text-white leading-tight">
               Connect Your Wallet
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
@@ -632,12 +651,13 @@ function ConnectWalletModal({
 
             <div className="space-y-4">
               {/* Join Waitlist Option (Top Priority) */}
-              <div
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   router.push("/register");
                 }}
-                className="group flex items-center justify-between p-5 bg-[#BCED09]/10 border border-[#BCED09]/30 rounded-2xl hover:bg-[#BCED09]/20 hover:border-[#BCED09] hover:scale-[1.01] transition-all duration-300 cursor-pointer text-left shadow-[0_0_15px_rgba(188,237,9,0.1)]"
+                className="group flex items-center justify-between w-full p-5 bg-[#BCED09]/10 border border-[#BCED09]/30 rounded-2xl hover:bg-[#BCED09]/20 hover:border-[#BCED09] hover:scale-[1.01] transition-all duration-300 cursor-pointer text-left shadow-[0_0_15px_rgba(188,237,9,0.1)]"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#BCED09] shadow-md">
@@ -673,7 +693,7 @@ function ConnectWalletModal({
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
-              </div>
+              </button>
 
               <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
@@ -693,8 +713,9 @@ function ConnectWalletModal({
                   const isUnavailable = availability[wallet.id] === false;
 
                   return (
-                    <div
+                    <button
                       key={wallet.id}
+                      type="button"
                       onClick={() => {
                         if (isUnavailable) {
                           window.open(wallet.url, "_blank", "noopener,noreferrer");
@@ -717,7 +738,7 @@ function ConnectWalletModal({
                           Not installed
                         </p>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -729,7 +750,7 @@ function ConnectWalletModal({
           <div className="flex flex-col items-center text-center py-6 space-y-6">
             <div className="w-12 h-12 border-4 border-[#BCED09] border-t-transparent rounded-full animate-spin" />
             <div>
-              <h3 className="text-2xl font-bold text-white mb-2">
+              <h3 id="connect-wallet-connecting-title" className="text-2xl font-bold text-white mb-2">
                 Connecting to {selectedWalletName}...
               </h3>
               <p className="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">
@@ -759,7 +780,7 @@ function ConnectWalletModal({
               </svg>
             </div>
             <div>
-              <h3 className="text-2xl font-black text-white mb-2 tracking-tight">
+              <h3 id="connect-wallet-failed-title" className="text-2xl font-black text-white mb-2 tracking-tight">
                 Connection Failed
               </h3>
               <p className="text-red-400 text-sm font-light max-w-sm mx-auto leading-relaxed bg-red-500/5 border border-red-500/10 rounded-xl p-4 text-left">
@@ -794,8 +815,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#010308] text-white flex flex-col font-sans overflow-x-hidden selection:bg-[#BCED09] selection:text-[#010308]">
       <Navbar onConnectClick={handleConnectWallet} />
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative w-full min-h-[920px] pt-12 md:pt-20 flex items-center justify-center bg-[radial-gradient(113.24%_213.1%_at_100%_0%,_rgba(188,237,9,0.15)_0%,_rgba(188,237,9,0)_40%),_radial-gradient(113.24%_213.1%_at_0%_100%,_rgba(188,237,9,0.05)_0%,_rgba(188,237,9,0)_40%)] border-b border-[#ffffff05]">
+      <main className="flex-1">
+        {/* --- HERO SECTION --- */}
+        <section className="relative w-full min-h-[920px] pt-12 md:pt-20 flex items-center justify-center bg-[radial-gradient(113.24%_213.1%_at_100%_0%,_rgba(188,237,9,0.15)_0%,_rgba(188,237,9,0)_40%),_radial-gradient(113.24%_213.1%_at_0%_100%,_rgba(188,237,9,0.05)_0%,_rgba(188,237,9,0)_40%)] border-b border-[#ffffff05]">
         {/* Background Image & Rectangular Left Overlay */}
         <div className="absolute inset-0 w-full h-full pointer-events-none">
           <Image
@@ -922,6 +944,7 @@ export default function HomePage() {
 
       {/* --- CTA SECTION (Extracted to Standalone Component) --- */}
       <CallToActionSection handleConnectWallet={handleConnectWallet} />
+      </main>
 
       {/* --- FOOTER SECTION --- */}
       <footer className="w-full bg-[#010308] border-t border-[#ffffff05] pt-16 pb-8">

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useFocusTrap } from "@/app/hooks/useFocusTrap";
 
 interface CancelOrderModalProps {
     onConfirm: () => void;
@@ -9,6 +10,10 @@ interface CancelOrderModalProps {
 }
 
 export function CancelOrderModal({ onConfirm, onClose, isCancelling }: CancelOrderModalProps) {
+    const panelRef = useFocusTrap<HTMLDivElement>({
+        onClose: !isCancelling ? onClose : undefined,
+    });
+
     return (
         <div
             className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -27,6 +32,11 @@ export function CancelOrderModal({ onConfirm, onClose, isCancelling }: CancelOrd
             </style>
 
             <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cancel-order-title"
+                tabIndex={-1}
                 className="bg-[#0E0E13] border border-[#454932]/20 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-lg w-full max-w-[480px] flex flex-col overflow-hidden animate-slideUpCenter"
                 onClick={e => e.stopPropagation()}
             >
@@ -38,7 +48,7 @@ export function CancelOrderModal({ onConfirm, onClose, isCancelling }: CancelOrd
                     </div>
 
                     <div className="text-center space-y-2">
-                        <h3 className="text-[#E4E1E9] font-bold text-2xl font-space">
+                        <h3 id="cancel-order-title" className="text-[#E4E1E9] font-bold text-2xl font-space">
                             Cancel this order?
                         </h3>
                         <p className="text-[#8F8389] text-sm font-space leading-relaxed max-w-[360px]">

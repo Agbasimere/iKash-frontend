@@ -8,7 +8,7 @@ export const OrderNavbar = () => {
     const isOrders = pathname === "/p2p/orders" || pathname.startsWith("/p2p/orders/");
 
     return (
-        <div className="flex items-center gap-4 px-4 md:px-12 pt-6 bg-[#0A0D14]/30 border-b border-[#1F2937] shrink-0">
+        <nav aria-label="P2P Order Navigation" className="flex items-center gap-4 px-4 md:px-12 pt-6 bg-[#0A0D14]/30 border-b border-[#1F2937] shrink-0">
             <Link
                 href="/p2p"
                 className={`pb-4 font-medium text-[14px] uppercase tracking-wider transition-colors cursor-pointer flex-1 md:flex-none text-center md:text-left ${
@@ -29,6 +29,6 @@ export const OrderNavbar = () => {
             >
                 Orders
             </Link>
-        </div>
+        </nav>
     );
 };

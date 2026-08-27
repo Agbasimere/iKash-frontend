@@ -1,17 +1,17 @@
 import { useCallback } from "react";
 import { useUser } from "../features/user/presentation/context/UserContext";
+import { ApiError } from "./api/errors";
 
-export class ApiError extends Error {
-    status: number;
-    code?: string;
-
-    constructor(message: string, status: number, code?: string) {
-        super(message);
-        this.name = "ApiError";
-        this.status = status;
-        this.code = code;
-    }
-}
+export {
+    apiFetch,
+    getApiBaseUrl,
+    setTokenProvider,
+    setUnauthorizedHandler,
+    setRefreshTokenHandler,
+    resetCsrfToken,
+} from "./api/client";
+export type { ApiFetchOptions } from "./api/client";
+export { ApiError } from "./api/errors";
 
 export function useApi() {
     const { accessToken, logout } = useUser();
