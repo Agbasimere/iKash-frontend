@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import { ExportTransactionRecord, ExportFilters } from "../types/transaction-export.types";
 
 const stellarNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "TESTNET";
@@ -20,12 +19,14 @@ function getExplorerUrl(hash: string, network: string): string {
 /**
  * Generates a PDF containing transaction history details and triggers browser download.
  */
-export function exportTransactionsPdf(
+export async function exportTransactionsPdf(
     records: ExportTransactionRecord[],
     filename: string,
     filters?: ExportFilters
-): void {
+): Promise<void> {
     if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    const { jsPDF } = await import("jspdf");
 
     const doc = new jsPDF({
         orientation: "portrait",

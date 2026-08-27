@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Stats } from "../models/stats";
+import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type TimeWindow = "7d" | "2s" | "1m" | "all";
 
 export function useStats() {
-    const [stats, setStats] = useState<Stats | null>(null);
+    const [timeWindow, setTimeWindow] = useState<string | undefined>(undefined);
 
-    const getStats = async (timeWindow?: string) => {
-        try {
+    const { data: stats = null, isLoading } = useQuery<Stats | null>({
+        queryKey: queryKeys.stats.window(timeWindow),
+        queryFn: () => {
             const params = timeWindow && timeWindow !== "7d" ? `?window=${timeWindow}` : "";
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stats${params}`);
-            const data = await res.json();
-            setStats(data);
-        } catch (error) {
-            console.error("Error fetching stats:", error);
+            return apiFetch<Stats>(`/stats${params}`);
         }
-    }
+    });
 
-    return { stats, getStats };
+    const getStats = useCallback(async (window?: string) => {
+        setTimeWindow(window);
+    }, []);
+
+    return { stats, getStats, isLoading };
 }

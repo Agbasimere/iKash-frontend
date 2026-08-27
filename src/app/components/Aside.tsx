@@ -29,12 +29,12 @@ export function Aside() {
     return (
         <>
             {/* Desktop sidebar — unchanged */}
-            <aside className="hidden md:flex w-[288px] sticky top-0 h-screen self-start shrink-0 overflow-y-auto bg-[#343434] flex-col p-8">
+            <aside aria-label="Sidebar Navigation" className="hidden md:flex w-[288px] sticky top-0 h-screen self-start shrink-0 overflow-y-auto bg-[#343434] flex-col p-8">
                 <div className="pl-3 pt-4">
                     <Image src='/iKash.svg' width={80} height={30} alt='iKash logo' />
                 </div>
 
-                <nav className="flex flex-col gap-7.5 pt-20">
+                <nav aria-label="Main Navigation" className="flex flex-col gap-7.5 pt-20">
                     {navLinks.map((link) => {
                         const isActive = pathname === link.href
                         const IconComponent = link.icon
@@ -52,7 +52,7 @@ export function Aside() {
                     })}
                 </nav>
 
-                <div className="mt-auto flex flex-col gap-4 pb-5">
+                <nav aria-label="Secondary Navigation" className="mt-auto flex flex-col gap-4 pb-5">
                     <div className="border-t border-gray-700 mb-2" />
                     <Link
                         href="/settings"
@@ -70,7 +70,7 @@ export function Aside() {
                         <Image src='/logout-icon.svg' width={20} height={20} alt='logout' />
                         <span className='text-[18px]'>Logout</span>
                     </button>
-                </div>
+                </nav>
             </aside>
 
             <MobileBottomNav links={navLinks} />

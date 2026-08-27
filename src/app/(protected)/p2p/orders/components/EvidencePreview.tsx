@@ -7,7 +7,7 @@ import { isSignatureCancelled } from "@/features/wallet/application/wallet.servi
 import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCancellation";
 import { CircleCheck, Loader2, Eye, Search } from "lucide-react";
 import { SignatureCancelledModal } from "../../components/SignatureCancelledModal";
-import { useNotification } from "../../../../components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 export interface EvidencePreviewProps {
     orderId: string;
@@ -43,7 +43,7 @@ export function EvidencePreview({
     const [timeLeft, setTimeLeft] = useState<string>("00:00");
     const [isExpired, setIsExpired] = useState(false);
     const [pendingAction, setPendingAction] = useState<"fund" | "release" | null>(null);
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const sig = useSignatureCancellation();
 
     useEffect(() => {
@@ -308,12 +308,12 @@ export function EvidencePreview({
                     </button>
                 ) : isWaitingForBuyer ? (
                     isExpired ? (
-                        <div className="bg-[#1F1F25] border border-red-500/50 w-full h-[56px] rounded-[12px] flex items-center justify-center">
+                        <div role="status" className="bg-[#1F1F25] border border-red-500/50 w-full h-[56px] rounded-[12px] flex items-center justify-center">
                             <span className="text-red-500 font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">EXPIRED</span>
                         </div>
                     ) : (
                         <button type="button" disabled className="bg-[#2A292F] w-full h-[56px] text-[#C2C7D0] font-extrabold text-[16px] leading-[24px] rounded-[12px] uppercase cursor-not-allowed tracking-[-0.4px] flex items-center justify-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#DAFF00] animate-pulse shadow-[0_0_8px_rgba(218,255,0,0.6)]" />
+                            <span role="status" className="w-2 h-2 rounded-full bg-[#DAFF00] animate-pulse shadow-[0_0_8px_rgba(218,255,0,0.6)]" />
                             WAITING FOR PAYMENT ({timeLeft})
                         </button>
                     )
@@ -328,7 +328,7 @@ export function EvidencePreview({
                         {isSubmitting ? "PROCESSING..." : "RELEASE CRYPTO"}
                     </button>
                 ) : escrowStatus === "released" ? (
-                    <div className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">
+                    <div role="status" className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">
                         <span className="text-[#DAFF00] font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">COMPLETED!</span>
                     </div>
                 ) : null}

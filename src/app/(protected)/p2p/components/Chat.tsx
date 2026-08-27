@@ -3,10 +3,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, MoreVertical, SendHorizontal, Paperclip } from "lucide-react";
 import { useUser } from "@/features/user/presentation/context/UserContext";
-import { useNotification } from "@/app/components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 import { useChatSocket } from "@/features/chat/hooks/useChatSocket";
 import { Message } from "@/features/chat/models/message";
 import { ChatError } from "@/features/chat/types/chat-events.types";
+import { DEMO_MODE } from "@/config/demo-mode";
+import {
+    initialMockMessages,
+    createDemoUserMessage,
+    createDemoSellerReply,
+    demoReplyFor,
+} from "./chat-demo";
 
 type ChatProps = {
     orderId: string;
@@ -14,37 +21,9 @@ type ChatProps = {
     counterpartyProfileImageUrl?: string;
 };
 
-// Initial mock messages matching the exact screenshots
-const INITIAL_MOCK_MESSAGES = (orderId: string, currentUserId: string): Message[] => [
-    {
-        messageId: "msg-mock-1",
-        orderId,
-        senderId: "seller-123",
-        content: "Hello! I am online and ready to confirm. Please include the order ID in the transfer notes.",
-        timestamp: new Date(Date.now() - 300000).toISOString(), // 5 min ago
-        senderAlias: "CryptoKing_99"
-    },
-    {
-        messageId: "msg-mock-2",
-        orderId,
-        senderId: currentUserId,
-        content: "Understood. Just initiated the transfer from my mobile app. Will upload the receipt in a moment.",
-        timestamp: new Date(Date.now() - 200000).toISOString(), // 3 min ago
-        senderAlias: "Buyer"
-    },
-    {
-        messageId: "msg-mock-3",
-        orderId,
-        senderId: "seller-123",
-        content: "Perfect. I'll be monitoring the incoming transactions.",
-        timestamp: new Date(Date.now() - 100000).toISOString(), // 1 min ago
-        senderAlias: "CryptoKing_99"
-    }
-];
-
 export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileImageUrl }: ChatProps) => {
     const { currentUser, accessToken } = useUser();
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -52,7 +31,9 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
     const [isCounterpartyTyping, setIsCounterpartyTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const isDemo = orderId === "demo" || orderId.startsWith("mock-");
+    // Demo chat is only reachable when the demo flag is on; otherwise mock ids
+    // fall through to the real chat flow (which loads from the backend).
+    const isDemo = DEMO_MODE && (orderId === "demo" || orderId.startsWith("mock-"));
 
     // Scroll bottom helper
     const scrollToBottom = useCallback((behavior: "smooth" | "auto" = "smooth") => {
@@ -84,11 +65,26 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         notify("error", error.message);
     }, [notify]);
 
+    const handleIncomingMessage = useCallback(
+        (message: Message) => {
+            mergeMessages(message);
+            if (currentUser && message.senderId !== currentUser.userId) {
+                notify({
+                    type: "info",
+                    title: "New message received",
+                    message: message.content,
+                    dedupeKey: `chat-message:${message.messageId}`,
+                });
+            }
+        },
+        [currentUser, mergeMessages, notify],
+    );
+
     const { status: connectionStatus, sendMessage } = useChatSocket({
         orderId,
         accessToken,
         enabled: Boolean(currentUser && accessToken && historyLoaded && !isDemo),
-        onMessage: mergeMessages,
+        onMessage: handleIncomingMessage,
         onError: handleSocketError,
     });
 
@@ -99,7 +95,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         let cancelled = false;
         queueMicrotask(() => {
             if (cancelled) return;
-            setMessages(isDemo ? INITIAL_MOCK_MESSAGES(orderId, currentUser.userId) : []);
+            setMessages(isDemo ? initialMockMessages(orderId, currentUser.userId) : []);
             setHistoryLoaded(isDemo);
             if (isDemo) setTimeout(() => scrollToBottom("auto"), 100);
         });
@@ -144,17 +140,13 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
         setIsSending(true);
 
         if (isDemo) {
-            // Add user message to mock state
-            const userMsg: Message = {
-                messageId: `user-msg-${Date.now()}`,
+            // Add user message to demo state
+            setMessages(prev => [...prev, createDemoUserMessage(
                 orderId,
-                senderId: currentUser.userId,
-                content: currentText,
-                timestamp: new Date().toISOString(),
-                senderAlias: currentUser.alias || "Buyer"
-            };
-
-            setMessages(prev => [...prev, userMsg]);
+                currentUser.userId,
+                currentUser.alias || "Buyer",
+                currentText,
+            )]);
             setInputText("");
             setTimeout(() => scrollToBottom("smooth"), 50);
             setIsSending(false);
@@ -163,20 +155,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
             setIsCounterpartyTyping(true);
             setTimeout(() => {
                 setIsCounterpartyTyping(false);
-                const replyText = currentText.toLowerCase().includes("receipt") || currentText.toLowerCase().includes("uploaded")
-                    ? "Awesome, checking the payment proof now! Give me a minute to verify on my SEPA portal."
-                    : "No problem, please let me know when you lock the funds on-chain.";
-
-                const sellerReply: Message = {
-                    messageId: `seller-reply-${Date.now()}`,
-                    orderId,
-                    senderId: "seller-123",
-                    content: replyText,
-                    timestamp: new Date().toISOString(),
-                    senderAlias: "CryptoKing_99"
-                };
-
-                setMessages(prev => [...prev, sellerReply]);
+                setMessages(prev => [...prev, createDemoSellerReply(orderId, demoReplyFor(currentText))]);
                 setTimeout(() => scrollToBottom("smooth"), 50);
             }, 1800);
 
@@ -254,7 +233,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
             </header>
             
             {/* Chat Messages Body */}
-            <main className="flex-grow overflow-y-auto p-6 space-y-5 bg-[#1B1B21]/10 scrollbar-thin flex flex-col">
+            <main role="log" aria-live="polite" aria-label="Chat messages" className="flex-grow overflow-y-auto p-6 space-y-5 bg-[#1B1B21]/10 scrollbar-thin flex flex-col">
                 {/* Order Created status banner */}
                 <section className="flex items-center justify-center my-2 shrink-0">
                     <div className="bg-[#1F1F25] px-4 py-1.5 flex items-center justify-center rounded-full border border-[rgba(69,73,50,0.2)]">
@@ -301,7 +280,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
 
                     {/* Typing Indicator */}
                     {isCounterpartyTyping && (
-                        <div className="flex flex-col items-start gap-1.5 max-w-[85%] transition-all duration-200">
+                        <div role="status" aria-live="polite" className="flex flex-col items-start gap-1.5 max-w-[85%] transition-all duration-200">
                             <div className="bg-[#1F1F25] text-gray-400 text-[12px] p-[10px_16px] rounded-r-[12px] rounded-bl-[4px] border border-white/[0.01] flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-[#BCED09] rounded-full animate-bounce delay-75" />
                                 <span className="w-1.5 h-1.5 bg-[#BCED09] rounded-full animate-bounce delay-150" />

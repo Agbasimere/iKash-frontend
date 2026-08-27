@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Landmark } from "lucide-react";
-import { ActiveOrderMock } from "../mocks/active-orders.mock";
+import type { Order } from "../models/order";
 
 function getRelativeTime(date: Date): string {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -16,20 +17,54 @@ function getRelativeTime(date: Date): string {
 }
 
 interface ActiveOrderCardProps {
-    order: ActiveOrderMock;
+    order: Order;
+    currentUserId?: string;
 }
 
 // Status pill: border colored, text white (per reviewer feedback)
 const STATUS_BORDER: Record<string, string> = {
-    FUNDING:     "border-[#BCED09]",
-    PENDING:     "border-yellow-400",
-    IN_PROGRESS: "border-blue-400",
+    FUNDING: "border-[#BCED09]",
+    PENDING: "border-yellow-400",
+    INITIALIZED: "border-blue-400",
+    FUNDED: "border-blue-400",
+    "IN PROGRESS": "border-blue-400",
+    "FIAT SENT": "border-[#BCED09]",
+    DISPUTED: "border-red-400",
+    RELEASED: "border-[#BCED09]",
+    RESOLVED: "border-[#BCED09]",
     // COMPLETED intentionally omitted — completed orders do not appear in the active section
 };
 
-export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
-    const displayTime = getRelativeTime(order.updatedAt);
-    const statusBorder = STATUS_BORDER[order.status] ?? "border-[#8F8389]";
+function statusLabel(order: Order): string {
+    // Prefer the on-chain escrow state when it is past "pending"; it reflects
+    // the live lifecycle of an active order better than the coarse orderStatus.
+    const escrowStatus = order.escrow?.escrowStatus;
+    if (escrowStatus && escrowStatus !== "pending") {
+        return escrowStatus.replace(/_/g, " ").toUpperCase();
+    }
+    return (order.orderStatus || "pending").toUpperCase();
+}
+
+export function ActiveOrderCard({ order, currentUserId }: ActiveOrderCardProps) {
+    const router = useRouter();
+
+    const isBuying = currentUserId !== undefined && order.buyerId === currentUserId;
+    const role = isBuying ? "BUYING" : "SELLING";
+    const counterparty = isBuying ? order.seller : order.buyer;
+
+    const displayStatus = statusLabel(order);
+    const statusBorder = STATUS_BORDER[displayStatus] ?? "border-[#8F8389]";
+    const assetCode = order.offer?.assetCode || order.assetCode || "USDC";
+    const paymentMethod =
+        order.offer?.payment_methods?.[0]?.bankName ||
+        order.offer?.paymentMethods?.[0]?.bankName ||
+        "Bank transfer";
+    const unitPrice = order.offer?.price;
+    const fiatCurrency =
+        (isBuying ? order.seller?.preferredCurrency : order.buyer?.preferredCurrency) || "USD";
+    const displayTime = order.createdAt ? getRelativeTime(new Date(order.createdAt)) : "—";
+
+    const openOrder = () => router.push(`/p2p/orders/${order.orderId}`);
 
     return (
         <div
@@ -42,13 +77,14 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                 {/* Role + Status row */}
                 <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold tracking-[0.15em] text-[#8F8389] uppercase">
-                        {order.role}
+                        {role}
                     </span>
                     {/* Border colored, text white */}
                     <span
+                        role="status"
                         className={`text-[11px] font-bold tracking-[0.12em] uppercase px-3 py-1 rounded-full border text-white ${statusBorder}`}
                     >
-                        {order.status}
+                        {displayStatus}
                     </span>
                 </div>
 
@@ -69,7 +105,7 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                             />
                         </div>
                         <span className="text-[13px] font-semibold text-[#c0c0c0] tracking-wider">
-                            {order.assetCode}
+                            {assetCode}
                         </span>
                     </div>
                 </div>
@@ -77,7 +113,7 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                 {/* Payment method — Landmark icon from lucide-react */}
                 <div className="flex items-center gap-2">
                     <Landmark size={16} className="text-[#8F8389] shrink-0" />
-                    <span className="text-[13px] text-[#8F8389]">{order.paymentMethod}</span>
+                    <span className="text-[13px] text-[#8F8389]">{paymentMethod}</span>
                 </div>
             </div>
 
@@ -89,10 +125,10 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                 {/* Counterparty — profile image pattern from P2P panel */}
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-[#2a2a2a] border border-[#3a3a3a] shrink-0 overflow-hidden">
-                        {order.counterpartyProfileImageUrl ? (
+                        {counterparty?.profileImageUrl ? (
                             <Image
-                                src={order.counterpartyProfileImageUrl}
-                                alt={order.counterpartyName || "Counterparty profile image"}
+                                src={counterparty.profileImageUrl}
+                                alt={counterparty.alias || "Counterparty profile image"}
                                 width={36}
                                 height={36}
                                 className="w-full h-full object-cover"
@@ -101,12 +137,12 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                     </div>
                     <div>
                         <p className="text-[13px] font-semibold text-white leading-tight">
-                            {order.counterpartyName}
+                            {counterparty?.alias || (isBuying ? "Seller" : "Buyer")}
                         </p>
                         <p className="text-[11px] text-[#8F8389] leading-tight">
                             Unit price&nbsp;
                             <span className="font-bold text-[#c0c0c0]">
-                                {order.unitPrice} {order.fiatCurrency}
+                                {unitPrice ?? "—"} {fiatCurrency}
                             </span>
                         </p>
                     </div>
@@ -115,13 +151,11 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
                 {/* Time + Open button — items aligned at bottom */}
                 <div className="flex items-end justify-between">
                     <span className="text-[12px] text-[#8F8389]">{displayTime}</span>
-                    {/* Open button — disabled for mock orders to prevent invalid navigation */}
                     <button
-                        disabled
-                        title="Available once backend integration is enabled"
+                        onClick={openOrder}
                         className="px-5 py-2 rounded-full bg-[#BCED09] text-black text-[13px] font-bold
-                                   tracking-wide cursor-not-allowed opacity-90 transition-all duration-150
-                                   hover:opacity-100"
+                                   tracking-wide cursor-pointer transition-all duration-150
+                                   hover:opacity-90"
                     >
                         Open
                     </button>

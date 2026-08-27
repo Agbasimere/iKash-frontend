@@ -6,7 +6,7 @@ import { isSignatureCancelled } from "@/features/wallet/application/wallet.servi
 import { useSignatureCancellation } from "@/features/wallet/hooks/useSignatureCancellation";
 import { Info, Upload, FileUp, CircleCheck, Loader2, Search, Trash2 } from "lucide-react";
 import { SignatureCancelledModal } from "../../components/SignatureCancelledModal";
-import { useNotification } from "../../../../components/NotificationContext";
+import { useNotifications } from "@/features/notifications";
 
 export interface TradeEvidenceUploaderProps {
     orderId: string;
@@ -44,7 +44,7 @@ export function TradeEvidenceUploader({
     const [isDragging, setIsDragging] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { notify } = useNotification();
+    const { notify } = useNotifications();
     const sig = useSignatureCancellation();
 
     // Sync with incoming evidenceUrl prop (e.g. on page refresh or peer update)
@@ -67,7 +67,7 @@ export function TradeEvidenceUploader({
             setUploadState('idle');
             setUploadedTime(null);
         }
-    }, [evidenceUrl, escrowStatus]);
+    }, [evidenceUrl, escrowStatus, uploadedTime]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -297,9 +297,9 @@ export function TradeEvidenceUploader({
                                 <Loader2 className="w-5 h-5 text-[#2B3400] animate-spin" /> UPLOADING...
                             </>
                         ) : uploadState === 'uploaded' ? (
-                            <>
+                            <span role="status">
                                 <CircleCheck className="w-5 h-5 text-[#2B3400] stroke-[3px]" /> EVIDENCE UPLOADED
-                            </>
+                            </span>
                         ) : (
                             <>
                                 <Upload className="w-4.5 h-4.5 stroke-[2.5px]" /> Upload Evidence
@@ -442,8 +442,7 @@ export function TradeEvidenceUploader({
                         WAITING FOR RELEASE
                     </button>
                 ) : escrowStatus === "released" ? (
-                    <div className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">
-                        <span className="text-[#DAFF00] font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">COMPLETED!</span>
+                    <div className="bg-[#DAFF00]/10 border border-[#DAFF00]/30 w-full h-[56px] rounded-[12px] flex items-center justify-center">                            <span role="status" className="text-[#DAFF00] font-bold text-[16px] leading-[24px] uppercase tracking-[-0.4px]">COMPLETED!</span>
                     </div>
                 ) : null}
 

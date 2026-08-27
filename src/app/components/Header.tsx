@@ -32,7 +32,7 @@ export function Header({ description, title, name, mobileLabel, showUser = true 
     return (
         <>
             {/* Desktop header */}
-            <div className="hidden md:flex items-center justify-between px-12 py-4 border-b border-[#1F2937] w-full">
+            <header className="hidden md:flex items-center justify-between px-12 py-4 border-b border-[#1F2937] w-full">
                 <div className="uppercase font-bold">
                     <div className="text-[12px] text-[#8F8389]">
                         {description !== undefined && <p>{description}</p>}
@@ -42,16 +42,17 @@ export function Header({ description, title, name, mobileLabel, showUser = true 
                     </div>
                 </div>
                 {showUser && <HeaderUser />}
-            </div>
+            </header>
 
             {/* Mobile header — sticky, solid background, hamburger + HeaderUser */}
-            <div className="md:hidden sticky top-0 z-50 bg-[#161618] border-b border-[#1F2937] px-5 py-4">
+            <header className="md:hidden sticky top-0 z-50 bg-[#161618] border-b border-[#1F2937] px-5 py-4">
                 {!menuOpen ? (
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setMenuOpen(true)}
                             className="p-1"
                             aria-label="Open menu"
+                            aria-expanded={menuOpen}
                         >
                             <Menu size={22} color="#ffffff" />
                         </button>
@@ -68,11 +69,12 @@ export function Header({ description, title, name, mobileLabel, showUser = true 
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-5">
+                    <nav className="flex flex-col gap-5" aria-label="Mobile Header Navigation">
                         <button
                             onClick={() => setMenuOpen(false)}
                             className="text-left text-[#BCED09] text-base font-bold tracking-widest uppercase"
                             aria-label="Close menu"
+                            aria-expanded={menuOpen}
                         >
                             Menu
                         </button>
@@ -91,9 +93,9 @@ export function Header({ description, title, name, mobileLabel, showUser = true 
                             <Image src='/logout-icon.svg' width={24} height={24} alt='logout' />
                             Logout
                         </button>
-                    </div>
+                    </nav>
                 )}
-            </div>
+            </header>
 
             {/* Full-page blur overlay when menu is open */}
             {menuOpen && (

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface PaymentProviderFieldRequirement {
     db_field: string;
@@ -28,34 +30,10 @@ export interface PaymentProvider {
 }
 
 export function usePaymentProviders() {
-    const [providers, setProviders] = useState<PaymentProvider[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: providers = [], isLoading: loading, error } = useQuery<PaymentProvider[], Error>({
+        queryKey: queryKeys.paymentMethods.providers,
+        queryFn: () => apiFetch<PaymentProvider[]>('/payment-providers')
+    });
 
-    useEffect(() => {
-        let ignore = false;
-
-        const fetchProviders = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payment-providers`);
-                if (!response.ok) throw new Error('Failed to fetch providers');
-                const data = await response.json();
-                if (!ignore) setProviders(data);
-            } catch (err: unknown) {
-                if (!ignore) setError(err instanceof Error ? err.message : String(err));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        fetchProviders();
-
-        return () => {
-            ignore = true;
-        };
-    }, []);
-
-    return { providers, loading, error };
+    return { providers, loading, error: error?.message || null };
 }
