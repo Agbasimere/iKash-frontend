@@ -284,7 +284,7 @@ export default function TradePage({ params }: PageProps) {
                                 <div className="flex flex-col gap-6 w-full h-full items-center justify-center">
                                     
                                     {!isCompleted && (
-                                        <div className="w-full bg-[rgba(26,27,33,0.7)] border border-[rgba(218,255,0,0.15)] rounded-[12px] p-4 md:p-[18px_28px] flex flex-col md:flex-row items-center justify-between shrink-0 gap-2">
+                                        <div role="status" aria-live="polite" className="w-full bg-[rgba(26,27,33,0.7)] border border-[rgba(218,255,0,0.15)] rounded-[12px] p-4 md:p-[18px_28px] flex flex-col md:flex-row items-center justify-between shrink-0 gap-2">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-2 h-2 rounded-full bg-[#DAFF00] shadow-[0_0_6px_#DAFF00]" />

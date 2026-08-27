@@ -35,7 +35,7 @@ export function MobileBottomNav({ links }: { links: NavLink[] }) {
     const svgPath = getNotchPath(activeIndex, links.length, viewBoxWidth)
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+        <nav aria-label="Mobile Bottom Navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40">
             <div className="relative w-full" style={{ height: '70px' }}>
                 <svg
                     viewBox={`0 0 ${viewBoxWidth} 70`}
@@ -77,6 +77,6 @@ export function MobileBottomNav({ links }: { links: NavLink[] }) {
                     })}
                 </div>
             </div>
-        </div>
+        </nav>
     )
 }

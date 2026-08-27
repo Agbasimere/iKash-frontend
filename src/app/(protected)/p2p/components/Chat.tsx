@@ -233,7 +233,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
             </header>
             
             {/* Chat Messages Body */}
-            <main className="flex-grow overflow-y-auto p-6 space-y-5 bg-[#1B1B21]/10 scrollbar-thin flex flex-col">
+            <main role="log" aria-live="polite" aria-label="Chat messages" className="flex-grow overflow-y-auto p-6 space-y-5 bg-[#1B1B21]/10 scrollbar-thin flex flex-col">
                 {/* Order Created status banner */}
                 <section className="flex items-center justify-center my-2 shrink-0">
                     <div className="bg-[#1F1F25] px-4 py-1.5 flex items-center justify-center rounded-full border border-[rgba(69,73,50,0.2)]">
@@ -280,7 +280,7 @@ export const Chat = ({ orderId, chatName = "Merchant Chat", counterpartyProfileI
 
                     {/* Typing Indicator */}
                     {isCounterpartyTyping && (
-                        <div className="flex flex-col items-start gap-1.5 max-w-[85%] transition-all duration-200">
+                        <div role="status" aria-live="polite" className="flex flex-col items-start gap-1.5 max-w-[85%] transition-all duration-200">
                             <div className="bg-[#1F1F25] text-gray-400 text-[12px] p-[10px_16px] rounded-r-[12px] rounded-bl-[4px] border border-white/[0.01] flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-[#BCED09] rounded-full animate-bounce delay-75" />
                                 <span className="w-1.5 h-1.5 bg-[#BCED09] rounded-full animate-bounce delay-150" />
