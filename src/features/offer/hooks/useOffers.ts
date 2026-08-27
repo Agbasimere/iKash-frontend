@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Offer } from "../models/offer";
 import { CreateOffer } from "../models/createOffer";
 import { UpdateOffer } from "../models/updateOffer";
-import { useApi } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function useOffers(filters?: Record<string, string>) {
-    const { apiFetch } = useApi();
     const queryClient = useQueryClient();
 
     const [manualFilters, setManualFilters] = useState<Record<string, string> | null>(null);
@@ -24,7 +23,7 @@ export function useOffers(filters?: Record<string, string>) {
                     endpoint += `?${queryString}`;
                 }
             }
-            return apiFetch(endpoint, { signal });
+            return apiFetch<Offer[]>(endpoint, { signal });
         },
     });
 
@@ -39,14 +38,14 @@ export function useOffers(filters?: Record<string, string>) {
     const getOffer = async (offerId: string) => {
         return await queryClient.fetchQuery({
             queryKey: queryKeys.offers.detail(offerId),
-            queryFn: () => apiFetch(`/offers/${offerId}`)
+            queryFn: () => apiFetch<Offer>(`/offers/${offerId}`)
         });
     };
 
     const { mutateAsync: createOffer } = useMutation({
-        mutationFn: (newOffer: CreateOffer) => apiFetch('/offers', {
+        mutationFn: (newOffer: CreateOffer) => apiFetch<Offer>('/offers', {
             method: "POST",
-            body: JSON.stringify(newOffer)
+            body: newOffer
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.offers.all });
@@ -54,9 +53,9 @@ export function useOffers(filters?: Record<string, string>) {
     });
 
     const { mutateAsync: updateOffer } = useMutation({
-        mutationFn: ({ offerId, update }: { offerId: string, update: UpdateOffer }) => apiFetch(`/offers/${offerId}`, {
+        mutationFn: ({ offerId, update }: { offerId: string, update: UpdateOffer }) => apiFetch<Offer>(`/offers/${offerId}`, {
             method: "PATCH",
-            body: JSON.stringify(update)
+            body: update
         }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.offers.all });
@@ -65,7 +64,7 @@ export function useOffers(filters?: Record<string, string>) {
     });
 
     const { mutateAsync: deleteOffer } = useMutation({
-        mutationFn: (offerId: string) => apiFetch(`/offers/${offerId}`, {
+        mutationFn: (offerId: string) => apiFetch<void>(`/offers/${offerId}`, {
             method: "DELETE"
         }),
         onSuccess: (_, offerId) => {
